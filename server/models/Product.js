@@ -9,7 +9,7 @@ const productSchema = new mongoose.Schema(
     discountPrice: { type: Number },
     category: {
       type: String,
-      enum: ['Books', 'Notebooks', 'Pens', 'Art Supplies', 'Office Supplies', 'Bags', 'Calculators', 'Geometry', 'Paper Products', 'Gift Items'],
+      enum: ['Books', 'Notebooks', 'Pens', 'Art Supplies', 'Office Supplies', 'Bags', 'Calculators', 'Geometry', 'Paper Products', 'Gift Items', 'School Packs'],
       required: true
     },
     brand: { type: String },
@@ -18,7 +18,8 @@ const productSchema = new mongoose.Schema(
     ratings: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
     isFeatured: { type: Boolean, default: false },
-    tags: [{ type: String }]
+    tags: [{ type: String }],
+    packItems: [{ type: String }]
   },
   { timestamps: true }
 );

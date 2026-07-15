@@ -39,7 +39,7 @@ const addToCart = asyncHandler(async (req, res) => {
       name: product.name,
       quantity: Number(quantity),
       price: product.discountPrice || product.price,
-      image: product.images?.[0] || ''
+      image: '/roots.png'
     });
   }
 

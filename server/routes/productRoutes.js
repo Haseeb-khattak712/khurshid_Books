@@ -9,8 +9,7 @@ import {
   updateProduct,
   deleteProduct
 } from '../controllers/productController.js';
-import protect from '../middleware/authMiddleware.js';
-import admin from '../middleware/adminMiddleware.js';
+import {protect,admin} from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
