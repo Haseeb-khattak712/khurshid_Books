@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useReducer } from 'react';
+import { createContext, useEffect, useReducer } from 'react';
 import axios from '../services/api.js';
 
-const AuthStateContext = createContext();
-const AuthDispatchContext = createContext();
+export const AuthStateContext = createContext();
+export const AuthDispatchContext = createContext();
 
 const initialState = {
   user: null,
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
       
       const fetchUser = async () => {
         try {
-          if (!state.user) {
+          if (!state.user || !state.user.role) {
             const res = await axios.get('/auth/me');
             if (res.data.success) {
               dispatch({ type: 'UPDATE_USER', payload: res.data.data });
@@ -60,6 +60,3 @@ export const AuthProvider = ({ children }) => {
     </AuthStateContext.Provider>
   );
 };
-
-export const useAuthState = () => useContext(AuthStateContext);
-export const useAuthDispatch = () => useContext(AuthDispatchContext);

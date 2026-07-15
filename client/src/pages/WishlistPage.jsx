@@ -1,30 +1,18 @@
-import { useCartDispatch } from '../context/CartContext.jsx';
 import { useWishlistDispatch, useWishlistState } from '../context/WishlistContext.jsx';
 import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 
 const WishlistPage = () => {
   const { items } = useWishlistState();
-  const wishlistDispatch = useWishlistDispatch();
-  const cartDispatch = useCartDispatch();
+  const { removeFromWishlist, moveToCart } = useWishlistDispatch();
 
-  const removeFromWishlist = (product) => {
-    wishlistDispatch({ type: 'REMOVE_FROM_WISHLIST', payload: product });
+  const handleRemove = (productId) => {
+    removeFromWishlist(productId);
     toast.success('Removed from wishlist');
   };
 
-  const moveToCart = (item) => {
-    cartDispatch({
-      type: 'ADD_TO_CART',
-      payload: {
-        product: item.product,
-        name: item.name,
-        image: item.image,
-        price: item.price,
-        quantity: 1
-      }
-    });
-    removeFromWishlist(item.product);
+  const handleMoveToCart = (item) => {
+    moveToCart(item);
     toast.success('Moved to cart');
   };
 
@@ -42,7 +30,7 @@ const WishlistPage = () => {
           <div className="mt-8 space-y-6">
             {items.map((item) => (
               <div key={item.product} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
-                <img src={item.image} alt={item.name} className="h-28 w-28 rounded-3xl object-cover" />
+                <img src="/roots.png" alt={item.name} className="h-28 w-28 rounded-3xl object-cover" />
                 <div className="flex-1">
                   <h2 className="text-lg font-semibold text-[#1A2744]">{item.name}</h2>
                   <p className="mt-2 text-sm text-slate-500">PKR {item.price}</p>
@@ -50,13 +38,13 @@ const WishlistPage = () => {
                 <div className="flex flex-wrap gap-3">
                   <button
                     className="rounded-3xl bg-[#D4A017] px-5 py-3 text-sm font-semibold text-[#1A2744]"
-                    onClick={() => moveToCart(item)}
+                    onClick={() => handleMoveToCart(item)}
                   >
                     Move to Cart
                   </button>
                   <button
                     className="rounded-3xl border border-slate-300 bg-white px-5 py-3 text-sm"
-                    onClick={() => removeFromWishlist(item.product)}
+                    onClick={() => handleRemove(item.product)}
                   >
                     Remove
                   </button>

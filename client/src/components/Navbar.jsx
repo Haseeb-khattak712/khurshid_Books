@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Heart, ShoppingBag, User, Menu, X, LogOut, ShieldAlert } from 'lucide-react';
-import { useAuthState, useAuthDispatch } from '../context/AuthContext.jsx';
+import { useAuthState, useAuthDispatch } from '../hooks/useAuth.js';
 import { useCartState } from '../context/CartContext.jsx';
 import { useWishlistState } from '../context/WishlistContext.jsx';
 

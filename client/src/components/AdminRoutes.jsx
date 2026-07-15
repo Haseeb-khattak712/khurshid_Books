@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthState } from '../context/AuthContext.jsx';
+import { useAuthState } from '../hooks/useAuth.js';
 
 const AdminRoute = ({ children }) => {
     const { user, token } = useAuthState();

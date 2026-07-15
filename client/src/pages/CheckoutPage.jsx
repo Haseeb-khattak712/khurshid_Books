@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCartState, useCartDispatch } from '../context/CartContext.jsx';
-import { useAuthState } from '../context/AuthContext.jsx';
+import { useAuthState } from '../hooks/useAuth.js';
 import api from '../services/api.js';
 import { toast } from 'react-hot-toast';
 import { CheckCircle2, MapPin, CreditCard, ClipboardList } from 'lucide-react';
@@ -10,21 +10,19 @@ const STEPS = ['Shipping', 'Payment', 'Review'];
 
 const CheckoutPage = () => {
   const { items } = useCartState();
-  const cartDispatch = useCartDispatch();
+  const { clearCart } = useCartDispatch(); // <-- FIX: destructure helper
   const { user } = useAuthState();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Shipping
   const [street, setStreet] = useState(user?.address?.street || '');
   const [city, setCity] = useState(user?.address?.city || '');
   const [province, setProvince] = useState(user?.address?.province || '');
   const [postalCode, setPostalCode] = useState(user?.address?.postalCode || '');
   const [country, setCountry] = useState(user?.address?.country || 'Pakistan');
 
-  // Payment
   const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -56,11 +54,11 @@ const CheckoutPage = () => {
     setLoading(true);
     try {
       const orderItems = items.map((item) => ({
-        product: item.product,
+        product: item.product || item._id || item.id, // defensive fallback
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        image: item.image
+        image: item.image || '/roots.png'
       }));
 
       const shippingAddress = { street, city, province, postalCode, country };
@@ -71,13 +69,28 @@ const CheckoutPage = () => {
         paymentMethod
       });
 
-      if (data.success) {
-        cartDispatch({ type: 'CLEAR_CART' });
-        toast.success('Order placed successfully!');
-        navigate(`/order/${data.data._id}`);
+      if (!data?.success) {
+        toast.error(data?.message || 'Order could not be placed. Please try again.');
+        return;
       }
+
+      const orderId = data?.data?._id || data?.data?.id || data?._id;
+      if (!orderId) {
+        toast.error('Order created but ID missing. Check your orders page.');
+        return;
+      }
+
+      clearCart(); // <-- FIX: use helper, not cartDispatch({ type: 'CLEAR_CART' })
+      toast.success('Order placed successfully!');
+      navigate(`/order/${orderId}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to place order. Please try again.');
+      console.error('Place order error:', error.response?.data || error.message);
+      toast.error(
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'Server error. Please try again later.'
+      );
     } finally {
       setLoading(false);
     }
@@ -100,7 +113,6 @@ const CheckoutPage = () => {
       <div className="mx-auto max-w-4xl px-4 py-10 md:px-6">
         <h1 className="font-serif text-3xl font-semibold text-[var(--ink)]">Checkout</h1>
 
-        {/* Step indicator */}
         <div className="mt-6 mb-8 flex items-center gap-0">
           {STEPS.map((label, i) => {
             const Icon = i === 0 ? MapPin : i === 1 ? CreditCard : ClipboardList;
@@ -134,7 +146,6 @@ const CheckoutPage = () => {
 
         <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-            {/* Step 1: Shipping */}
             {step === 0 && (
               <form onSubmit={handleShippingNext} className="space-y-5">
                 <h2 className="font-serif text-xl font-semibold text-[var(--ink)] border-b border-[var(--line)] pb-3">
@@ -203,7 +214,6 @@ const CheckoutPage = () => {
               </form>
             )}
 
-            {/* Step 2: Payment */}
             {step === 1 && (
               <div className="space-y-5">
                 <h2 className="font-serif text-xl font-semibold text-[var(--ink)] border-b border-[var(--line)] pb-3">
@@ -256,7 +266,6 @@ const CheckoutPage = () => {
               </div>
             )}
 
-            {/* Step 3: Review */}
             {step === 2 && (
               <div className="space-y-5">
                 <h2 className="font-serif text-xl font-semibold text-[var(--ink)] border-b border-[var(--line)] pb-3">
@@ -264,8 +273,8 @@ const CheckoutPage = () => {
                 </h2>
                 <div className="space-y-3">
                   {items.map((item) => (
-                    <div key={item.product} className="flex items-center gap-3">
-                      <img src={item.image} alt={item.name} className="h-12 w-12 rounded-xl object-cover border border-slate-100" />
+                    <div key={item.product || item._id || item.id} className="flex items-center gap-3">
+                      <img src={item.image || '/roots.png'} alt={item.name} className="h-12 w-12 rounded-xl object-cover border border-slate-100" />
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-[var(--ink)]">{item.name}</p>
                         <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
@@ -309,7 +318,6 @@ const CheckoutPage = () => {
             )}
           </div>
 
-          {/* Order Summary Sidebar */}
           <aside className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm h-fit">
             <h3 className="font-serif text-lg font-semibold text-[#1A2744] border-b border-[var(--line)] pb-3">Summary</h3>
             <div className="mt-4 space-y-3 text-sm text-slate-600">

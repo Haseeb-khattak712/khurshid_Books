@@ -4,12 +4,12 @@ const useScrollReveal = (deps = []) => {
   useEffect(() => {
     window.scrollTo(0, 0);
 
-    document.querySelectorAll('[data-reveal]').forEach((element) => {
-      element.classList.remove('reveal-visible');
-    });
-
     const elements = Array.from(document.querySelectorAll('[data-reveal]'));
     if (!elements.length) return undefined;
+
+    elements.forEach((element) => {
+      element.classList.remove('reveal-visible');
+    });
 
     const observer = new IntersectionObserver(
       (entries, obs) => {
@@ -19,7 +19,7 @@ const useScrollReveal = (deps = []) => {
           obs.unobserve(entry.target);
         });
       },
-      { threshold: 0.15 }
+      { threshold: 0.1, rootMargin: '100px 0px' }
     );
 
     elements.forEach((element) => observer.observe(element));

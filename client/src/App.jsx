@@ -1,75 +1,89 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { CartProvider } from './context/CartContext.jsx';
 import { WishlistProvider } from './context/WishlistContext.jsx';
+import { PageTransition } from './components/PageTransition.jsx';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
-import HomePage from './pages/HomePage.jsx';
-import ShopPage from './pages/ShopPage.jsx';
-import ProductDetailPage from './pages/ProductDetailPage.jsx';
-import CartPage from './pages/CartPage.jsx';
-import CheckoutPage from './pages/CheckoutPage.jsx';
-import OrderConfirmationPage from './pages/OrderConfirmationPage.jsx';
-import LoginPage from './pages/LoginPage.jsx';
-import RegisterPage from './pages/RegisterPage.jsx';
-import ProfilePage from './pages/ProfilePage.jsx';
-import OrderHistoryPage from './pages/OrderHistoryPage.jsx';
-import WishlistPage from './pages/WishlistPage.jsx';
-import AboutPage from './pages/AboutPage.jsx';
-import ContactPage from './pages/ContactPage.jsx';
-import AdminDashboard from './pages/admin/AdminDashboard.jsx';
-import ManageProducts from './pages/admin/ManageProducts.jsx';
-import ManageOrders from './pages/admin/ManageOrders.jsx';
-import ManageUsers from './pages/admin/ManageUsers.jsx';
+import Spinner from './components/Spinner.jsx';
 import useScrollReveal from './hooks/useScrollReveal.jsx';
 import './App.css';
 
-// Call useScrollReveal inside a Router-scoped component so `useLocation`
-// can be used safely. This avoids the "useLocation must be used inside a Router"
-// runtime error that caused pages to render blank.
+const HomePage = lazy(() => import('./pages/HomePage.jsx'));
+const ShopPage = lazy(() => import('./pages/ShopPage.jsx'));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage.jsx'));
+const CartPage = lazy(() => import('./pages/CartPage.jsx'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage.jsx'));
+const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage.jsx'));
+const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage.jsx'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
+const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage.jsx'));
+const WishlistPage = lazy(() => import('./pages/WishlistPage.jsx'));
+const AboutPage = lazy(() => import('./pages/AboutPage.jsx'));
+const ContactPage = lazy(() => import('./pages/ContactPage.jsx'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const ManageProducts = lazy(() => import('./pages/admin/ManageProducts.jsx'));
+const ManageOrders = lazy(() => import('./pages/admin/ManageOrders.jsx'));
+const ManageUsers = lazy(() => import('./pages/admin/ManageUsers.jsx'));
+const ManageSchoolPacks = lazy(() => import('./pages/admin/ManageSchoolPacks.jsx'));
+const SchoolPacksPage = lazy(() => import('./pages/SchoolPacksPage.jsx'));
+
 function ScrollRevealHandler() {
   const location = useLocation();
   useScrollReveal([location.pathname]);
   return null;
 }
 
-function App() {
+function AppRoutes() {
+  const location = useLocation();
 
   return (
-    <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <Router>
-            <ScrollRevealHandler />
-            <div className="min-h-screen bg-[var(--cream)] text-[var(--text)]">
-              <Navbar />
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/shop" element={<ShopPage />} />
-                <Route path="/product/:slug" element={<ProductDetailPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/checkout" element={<CheckoutPage />} />
-                <Route path="/order/:id" element={<OrderConfirmationPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/orders" element={<OrderHistoryPage />} />
-                <Route path="/wishlist" element={<WishlistPage />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/contact" element={<ContactPage />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/products" element={<ManageProducts />} />
-                <Route path="/admin/orders" element={<ManageOrders />} />
-                <Route path="/admin/users" element={<ManageUsers />} />
-              </Routes>
-              <Footer />
-              <Toaster position="top-right" />
-            </div>
-          </Router>
-        </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
+    <div className="min-h-screen bg-[var(--cream)] text-[var(--text)]">
+      <ScrollRevealHandler />
+      <Navbar />
+      <Suspense fallback={<div className="min-h-screen"><Spinner /></div>}>
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
+          <Route path="/shop" element={<PageTransition><ShopPage /></PageTransition>} />
+          <Route path="/product/:slug" element={<PageTransition><ProductDetailPage /></PageTransition>} />
+          <Route path="/cart" element={<PageTransition><CartPage /></PageTransition>} />
+          <Route path="/school-packs" element={<PageTransition><SchoolPacksPage /></PageTransition>} />
+          <Route path="/checkout" element={<PageTransition><CheckoutPage /></PageTransition>} />
+          <Route path="/order/:id" element={<PageTransition><OrderConfirmationPage /></PageTransition>} />
+          <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
+          <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
+          <Route path="/profile" element={<PageTransition><ProfilePage /></PageTransition>} />
+          <Route path="/orders" element={<PageTransition><OrderHistoryPage /></PageTransition>} />
+          <Route path="/wishlist" element={<PageTransition><WishlistPage /></PageTransition>} />
+          <Route path="/about" element={<PageTransition><AboutPage /></PageTransition>} />
+          <Route path="/contact" element={<PageTransition><ContactPage /></PageTransition>} />
+          <Route path="/admin" element={<PageTransition><AdminDashboard /></PageTransition>} />
+          <Route path="/admin/products" element={<PageTransition><ManageProducts /></PageTransition>} />
+          <Route path="/admin/orders" element={<PageTransition><ManageOrders /></PageTransition>} />
+          <Route path="/admin/users" element={<PageTransition><ManageUsers /></PageTransition>} />
+          <Route path="/admin/school-packs" element={<PageTransition><ManageSchoolPacks /></PageTransition>} />
+        </Routes>
+      </Suspense>
+      <Footer />
+      <Toaster position="top-right" />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <AppRoutes />
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Package, ShoppingCart, Users, TrendingUp, ArrowRight } from 'lucide-react';
+import { Package, ShoppingCart, Users, TrendingUp, ArrowRight, School } from 'lucide-react';
 import api from '../../services/api.js';
 import Spinner from '../../components/Spinner.jsx';
 
@@ -113,15 +113,23 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Quick nav */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        {/* Quick nav — now 4 columns including School Packs */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { label: 'Manage Products', to: '/admin/products', desc: 'Add, edit, or remove products from the catalogue.' },
             { label: 'Manage Orders', to: '/admin/orders', desc: 'Track and update order statuses for all customers.' },
             { label: 'Manage Users', to: '/admin/users', desc: 'View registered users and manage access.' },
+            { label: 'School Packs', to: '/admin/school-packs', desc: 'Create and manage school book packs with bundled products.' },
           ].map((item) => (
             <Link key={item.to} to={item.to} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition group">
-              <p className="font-serif text-lg font-semibold text-[var(--ink)] group-hover:text-[var(--brass)] transition">{item.label}</p>
+              <div className="flex items-center gap-2 mb-2">
+                {item.label === 'School Packs' && (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10">
+                    <School size={16} className="text-[#D4A017]" />
+                  </div>
+                )}
+                <p className="font-serif text-lg font-semibold text-[var(--ink)] group-hover:text-[var(--brass)] transition">{item.label}</p>
+              </div>
               <p className="mt-2 text-xs text-[var(--text-muted)] leading-relaxed">{item.desc}</p>
               <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[var(--brass)]">
                 Go <ArrowRight size={12} />

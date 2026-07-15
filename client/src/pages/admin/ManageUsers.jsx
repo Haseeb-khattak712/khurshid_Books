@@ -4,7 +4,7 @@ import { Trash2, ArrowLeft, ShieldAlert, User } from 'lucide-react';
 import api from '../../services/api.js';
 import Spinner from '../../components/Spinner.jsx';
 import { toast } from 'react-hot-toast';
-import { useAuthState } from '../../context/AuthContext.jsx';
+import { useAuthState } from '../../hooks/useAuth.js';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);

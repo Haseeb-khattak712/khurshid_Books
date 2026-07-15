@@ -10,7 +10,7 @@ const ProductCard = ({ product }) => {
       <Link to={`/product/${product.slug}`} className="card-3d-inner surface-raised flex h-full flex-col overflow-hidden">
         <div className="relative h-56 overflow-hidden bg-[var(--paper)]">
           <img
-            src={product.images?.[0] || '/placeholder.png'}
+            src="/roots.png"
             alt={product.name}
             className="h-full w-full object-cover"
             loading="lazy"

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PackageOpen } from 'lucide-react';
 import api from '../services/api.js';
 import Spinner from '../components/Spinner.jsx';
-import { useAuthState } from '../context/AuthContext.jsx';
+import { useAuthState } from '../hooks/useAuth.js';
 
 const STATUS_STYLES = {
   pending:    'text-amber-700 bg-amber-50 border-amber-200',

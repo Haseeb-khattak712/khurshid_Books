@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import api from '../services/api.js';
-import { useAuthDispatch, useAuthState } from '../context/AuthContext.jsx';
+import { useAuthDispatch, useAuthState } from '../hooks/useAuth.js';
 
 const RegisterPage = () => {
   const [name, setName] = useState('');

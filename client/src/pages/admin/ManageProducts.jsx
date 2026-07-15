@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Trash2, Star, ArrowLeft, Plus, Search } from 'lucide-react';
+import { Trash2, Star, ArrowLeft, Plus, Search, Pencil, X } from 'lucide-react';
 import api from '../../services/api.js';
 import Spinner from '../../components/Spinner.jsx';
 import { toast } from 'react-hot-toast';
@@ -14,6 +14,19 @@ const ManageProducts = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit state
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: 'Notebooks',
+    brand: '',
+    stock: '',
+    images: '',
+    isFeatured: false,
+  });
 
   // New product form state
   const [newProduct, setNewProduct] = useState({
@@ -66,6 +79,64 @@ const ManageProducts = () => {
     }
   };
 
+  // ─── EDIT LOGIC ───────────────────────────────────────────────────────────
+
+  const startEdit = (product) => {
+    setEditingProduct(product);
+    setEditForm({
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price || '',
+      category: product.category || 'Notebooks',
+      brand: product.brand || '',
+      stock: product.stock || '',
+      images: product.images?.[0] || product.image || '',
+      isFeatured: product.isFeatured || false,
+    });
+    setShowForm(false); // Close add form if open
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingProduct(null);
+    setEditForm({
+      name: '',
+      description: '',
+      price: '',
+      category: 'Notebooks',
+      brand: '',
+      stock: '',
+      images: '',
+      isFeatured: false,
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    setSubmitting(true);
+    try {
+      const payload = {
+        ...editForm,
+        price: Number(editForm.price),
+        stock: Number(editForm.stock),
+        images: editForm.images ? [editForm.images] : ['/roots.png'],
+      };
+      const { data } = await api.put(`/products/${editingProduct._id}`, payload);
+      if (data.success) {
+        toast.success('Product updated successfully');
+        setEditingProduct(null);
+        fetchProducts();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update product');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ─── CREATE LOGIC (unchanged) ─────────────────────────────────────────────
+
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -74,7 +145,7 @@ const ManageProducts = () => {
         ...newProduct,
         price: Number(newProduct.price),
         stock: Number(newProduct.stock),
-        images: newProduct.images ? [newProduct.images] : [],
+        images: ['/roots.png'],
       };
       const { data } = await api.post('/products', payload);
       if (data.success) {
@@ -104,15 +175,79 @@ const ManageProducts = () => {
           </div>
           <button
             type="button"
-            onClick={() => setShowForm((v) => !v)}
+            onClick={() => { setShowForm((v) => !v); cancelEdit(); }}
             className="btn-primary py-2 px-5 text-sm flex items-center gap-1.5"
           >
             <Plus size={15} /> {showForm ? 'Cancel' : 'Add Product'}
           </button>
         </div>
 
-        {/* Add Product Form */}
-        {showForm && (
+        {/* ─── EDIT FORM ──────────────────────────────────────────────────────── */}
+        {editingProduct && (
+          <form onSubmit={handleEditSubmit} className="mb-8 rounded-3xl border border-[var(--brass)]/30 bg-white p-6 shadow-sm space-y-4 relative">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">Edit Product</h2>
+              <button type="button" onClick={cancelEdit} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-slate-700">
+                Name *
+                <input required type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="mt-1 field" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Brand
+                <input type="text" value={editForm.brand} onChange={(e) => setEditForm({ ...editForm, brand: e.target.value })}
+                  className="mt-1 field" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Price (Rs.) *
+                <input required type="number" min="1" value={editForm.price} onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                  className="mt-1 field" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Stock *
+                <input required type="number" min="0" value={editForm.stock} onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                  className="mt-1 field" />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Category *
+                <select required value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  className="mt-1 field">
+                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Image URL
+                <input type="url" value={editForm.images} onChange={(e) => setEditForm({ ...editForm, images: e.target.value })}
+                  className="mt-1 field" placeholder="https://..." />
+              </label>
+              <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+                Description
+                <textarea value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows="3" className="mt-1 field resize-none" />
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+                <input type="checkbox" checked={editForm.isFeatured} onChange={(e) => setEditForm({ ...editForm, isFeatured: e.target.checked })}
+                  className="accent-[var(--brass)]" />
+                Featured product
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={cancelEdit} className="btn-secondary py-2.5 px-6 text-sm">
+                Cancel
+              </button>
+              <button type="submit" disabled={submitting} className="btn-primary py-2.5 px-6 text-sm disabled:opacity-60">
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ─── ADD FORM (unchanged) ─────────────────────────────────────────── */}
+        {showForm && !editingProduct && (
           <form onSubmit={handleCreateProduct} className="mb-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
             <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">New Product</h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -201,9 +336,7 @@ const ManageProducts = () => {
                   <tr key={product._id} className="hover:bg-slate-50 transition">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        {product.images?.[0] && (
-                          <img src={product.images[0]} alt={product.name} className="h-10 w-10 rounded-xl object-cover border border-slate-100" />
-                        )}
+                        <img src="/roots.png" alt={product.name} className="h-10 w-10 rounded-xl object-cover border border-slate-100" />
                         <div>
                           <p className="font-semibold text-[var(--ink)] max-w-[200px] truncate">{product.name}</p>
                           <p className="text-xs text-slate-400">{product.brand}</p>
@@ -223,13 +356,22 @@ const ManageProducts = () => {
                       </span>
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(product._id, product.name)}
-                        className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
-                      >
-                        <Trash2 size={12} /> Delete
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(product)}
+                          className="inline-flex items-center gap-1 rounded-full border border-amber-200 px-3 py-1 text-xs font-semibold text-[var(--brass)] hover:bg-amber-50 transition"
+                        >
+                          <Pencil size={12} /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(product._id, product.name)}
+                          className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
+                        >
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
