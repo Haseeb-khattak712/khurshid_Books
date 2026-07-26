@@ -29,19 +29,19 @@ export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
+    // Only react to token changes. Avoid depending on `state.user` which causes
+    // the effect to re-run when user object is updated elsewhere.
     if (state.token) {
       localStorage.setItem('token', state.token);
       axios.defaults.headers.common.Authorization = `Bearer ${state.token}`;
-      
+
       const fetchUser = async () => {
         try {
-          if (!state.user || !state.user.role) {
-            const res = await axios.get('/auth/me');
-            if (res.data.success) {
-              dispatch({ type: 'UPDATE_USER', payload: res.data.data });
-            } else {
-              dispatch({ type: 'LOGOUT' });
-            }
+          const res = await axios.get('/auth/me');
+          if (res.data.success) {
+            dispatch({ type: 'UPDATE_USER', payload: res.data.data });
+          } else {
+            dispatch({ type: 'LOGOUT' });
           }
         } catch (error) {
           dispatch({ type: 'LOGOUT' });
@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       delete axios.defaults.headers.common.Authorization;
     }
-  }, [state.token, state.user]);
+  }, [state.token]);
 
   return (
     <AuthStateContext.Provider value={state}>

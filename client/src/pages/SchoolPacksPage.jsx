@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check } from 'lucide-react';
+import LazyImage from '../components/LazyImage.jsx';
 import api from '../services/api.js';
 
 const SchoolPacksPage = () => {
@@ -12,16 +13,13 @@ const SchoolPacksPage = () => {
   useEffect(() => {
     const fetchPacks = async () => {
       try {
-        const res = await api.get('/school-packs'); // <-- CHANGED from /products to /school-packs
+        const params = {};
+        if (schoolFilter) params.school = schoolFilter;
+        // limit initial payload to 12 items to reduce DOM and payload
+        params.limit = 12;
+        const res = await api.get('/school-packs', { params });
         if (res.data.success) {
-          let data = res.data.data;
-          if (schoolFilter) {
-            data = data.filter(p => 
-              p.school.toLowerCase().includes(schoolFilter.toLowerCase()) ||
-              p.name.toLowerCase().includes(schoolFilter.toLowerCase())
-            );
-          }
-          setPacks(data);
+          setPacks(res.data.data || []);
         }
       } catch (error) {
         console.error('Error fetching packs:', error);
@@ -99,7 +97,7 @@ const SchoolPacksPage = () => {
             {packs.map((pack) => (
               <div key={pack._id} className="rounded-3xl border border-slate-200 bg-white overflow-hidden hover:shadow-lg transition">
                 <div className="relative h-48 bg-slate-100">
-                  <img src="/roots.png" alt={pack.name} className="h-full w-full object-cover" />
+                  <LazyImage src="/roots.png" alt={pack.name} className="h-full w-full object-cover" width="600" height="320" />
                   {pack.discountPrice && pack.discountPrice < pack.price && (
                     <div className="absolute top-4 right-4 rounded-full bg-[#D4A017] px-3 py-1 text-xs font-bold text-[#1A2744]">
                       SAVE Rs. {(pack.price - pack.discountPrice).toLocaleString()}

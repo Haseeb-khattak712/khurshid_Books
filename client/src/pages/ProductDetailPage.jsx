@@ -6,6 +6,7 @@ import { useCartDispatch } from '../context/CartContext.jsx';
 import { useWishlistDispatch, useWishlistState } from '../context/WishlistContext.jsx';
 import api from '../services/api.js';
 import { toast } from 'react-hot-toast';
+import LazyImage from '../components/LazyImage.jsx';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
@@ -100,10 +101,12 @@ const ProductDetailPage = () => {
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
           {/* Image Section */}
           <div className="relative rounded-3xl bg-white p-4 shadow-sm">
-            <img
+            <LazyImage
               src="/roots.png"
               alt={product.name}
               className="h-full w-full rounded-2xl object-cover aspect-square"
+              width="720"
+              height="720"
             />
             {savings > 0 && (
               <span className="absolute left-6 top-6 rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white">

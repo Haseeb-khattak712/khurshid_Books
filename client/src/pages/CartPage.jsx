@@ -2,6 +2,7 @@ import { useCartState, useCartDispatch } from '../context/CartContext.jsx';
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import LazyImage from '../components/LazyImage.jsx';
 
 const CartPage = () => {
   const { items } = useCartState();
@@ -60,10 +61,12 @@ const CartPage = () => {
               {items.map((item) => (
                 <div key={item.product || item._id || item.id} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <img 
-                      src={item.image || '/roots.png'} 
-                      alt={item.name} 
-                      className="h-20 w-20 rounded-2xl object-cover border border-slate-100 shrink-0" 
+                    <LazyImage
+                      src={item.image || '/roots.png'}
+                      alt={item.name}
+                      className="h-20 w-20 rounded-2xl object-cover border border-slate-100 shrink-0"
+                      width="80"
+                      height="80"
                     />
                     <div>
                       <h2 className="text-base font-semibold text-[#1A2744] hover:text-[#D4A017] transition">

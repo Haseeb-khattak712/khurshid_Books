@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
+import { memo } from 'react';
+import LazyImage from './LazyImage.jsx';
 
 const ProductCard = ({ product }) => {
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
@@ -9,11 +11,12 @@ const ProductCard = ({ product }) => {
     <div className="card-3d h-full">
       <Link to={`/product/${product.slug}`} className="card-3d-inner surface-raised flex h-full flex-col overflow-hidden">
         <div className="relative h-56 overflow-hidden bg-[var(--paper)]">
-          <img
+          <LazyImage
             src="/roots.png"
             alt={product.name}
             className="h-full w-full object-cover"
-            loading="lazy"
+            width="400"
+            height="280"
           />
           {hasDiscount && (
             <span className="absolute left-3 top-3 rounded-[var(--radius-sm)] bg-[var(--stamp)] px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-white shadow-md">
@@ -48,4 +51,4 @@ const ProductCard = ({ product }) => {
   );
 };
 
-export default ProductCard;
+export default memo(ProductCard);

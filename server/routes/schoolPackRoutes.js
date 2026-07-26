@@ -5,14 +5,28 @@ import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// GET /api/school-packs - Get all active packs (public)
-// GET /api/school-packs?admin=true - Get all packs (admin only)
+// GET /api/school-packs - Get packs (public)
+// Supports optional query params: admin=true, school=<slug>, limit, skip
 router.get('/', async (req, res) => {
   try {
-    const filter = req.query.admin === 'true' ? {} : { isActive: true };
+    const { admin, school, limit = 12, skip = 0, q } = req.query;
+    const filter = admin === 'true' ? {} : { isActive: true };
+
+    if (school) {
+      // allow searching by school slug or name
+      filter.school = { $regex: new RegExp(school, 'i') };
+    }
+
+    if (q) {
+      // simple text search on name
+      filter.name = { $regex: new RegExp(q, 'i') };
+    }
+
     const packs = await SchoolPack.find(filter)
       .populate('items.product', 'name price image')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(Number(skip))
+      .limit(Math.min(Number(limit), 100));
 
     res.json({
       success: true,

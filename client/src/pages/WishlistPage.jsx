@@ -1,6 +1,7 @@
 import { useWishlistDispatch, useWishlistState } from '../context/WishlistContext.jsx';
 import { toast } from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import LazyImage from '../components/LazyImage.jsx';
 
 const WishlistPage = () => {
   const { items } = useWishlistState();
@@ -30,7 +31,13 @@ const WishlistPage = () => {
           <div className="mt-8 space-y-6">
             {items.map((item) => (
               <div key={item.product} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:flex-row sm:items-center">
-                <img src="/roots.png" alt={item.name} className="h-28 w-28 rounded-3xl object-cover" />
+                <LazyImage
+                  src="/roots.png"
+                  alt={item.name}
+                  className="h-28 w-28 rounded-3xl object-cover"
+                  width="112"
+                  height="112"
+                />
                 <div className="flex-1">
                   <h2 className="text-lg font-semibold text-[#1A2744]">{item.name}</h2>
                   <p className="mt-2 text-sm text-slate-500">PKR {item.price}</p>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Heart, ShoppingBag, User, Menu, X, LogOut, ShieldAlert } from 'lucide-react';
 import { useAuthState, useAuthDispatch } from '../hooks/useAuth.js';
@@ -23,8 +23,8 @@ const Navbar = () => {
   const { items: cartItems } = useCartState();
   const { items: wishlistItems } = useWishlistState();
 
-  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const wishlistCount = wishlistItems.length;
+  const cartCount = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems]);
+  const wishlistCount = useMemo(() => wishlistItems.length, [wishlistItems]);
 
   const handleLogout = () => {
     authDispatch({ type: 'LOGOUT' });

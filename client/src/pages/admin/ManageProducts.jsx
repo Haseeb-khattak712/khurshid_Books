@@ -336,7 +336,13 @@ const ManageProducts = () => {
                   <tr key={product._id} className="hover:bg-slate-50 transition">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <img src="/roots.png" alt={product.name} className="h-10 w-10 rounded-xl object-cover border border-slate-100" />
+                        <LazyImage
+                          src="/roots.png"
+                          alt={product.name}
+                          className="h-10 w-10 rounded-xl object-cover border border-slate-100"
+                          width="40"
+                          height="40"
+                        />
                         <div>
                           <p className="font-semibold text-[var(--ink)] max-w-[200px] truncate">{product.name}</p>
                           <p className="text-xs text-slate-400">{product.brand}</p>

@@ -320,7 +320,13 @@ const SchoolPackForm = ({ pack, isOpen, onClose, onSave }) => {
                         onClick={() => addItem(p)}
                         className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-[#FAF8F3] transition border-b border-slate-50 last:border-0"
                       >
-                        <img src="/roots.png" alt="" className="h-8 w-8 rounded-lg object-cover" />
+                        <LazyImage
+                          src="/roots.png"
+                          alt=""
+                          className="h-8 w-8 rounded-lg object-cover"
+                          width="32"
+                          height="32"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[#1A2744] truncate">{p.name}</p>
                           <p className="text-xs text-slate-400">Rs. {p.price}</p>
@@ -345,7 +351,13 @@ const SchoolPackForm = ({ pack, isOpen, onClose, onSave }) => {
                     key={item.product}
                     className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-[#FAF8F3] p-3"
                   >
-                    <img src="/roots.png" alt="" className="h-10 w-10 rounded-xl object-cover" />
+                    <LazyImage
+                      src="/roots.png"
+                      alt=""
+                      className="h-10 w-10 rounded-xl object-cover"
+                      width="40"
+                      height="40"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[#1A2744] truncate">{item.name}</p>
                       <p className="text-xs text-slate-400">Rs. {item.price}</p>

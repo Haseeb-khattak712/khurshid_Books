@@ -42,6 +42,7 @@ import {
   BadgeCheck, MessageSquare, Ghost, AlertCircle, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard.jsx';
+import LazyImage from '../components/LazyImage.jsx';
 import api from '../services/api.js';
 
 // ─── Static data ───────────────────────────────────────────────────────────────
@@ -252,6 +253,7 @@ const HeroCarousel = memo(() => {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const timerRef = useRef(null);
+  const containerRef = useRef(null);
 
   const goTo = useCallback((index) => {
     setCurrent(index);
@@ -272,6 +274,22 @@ const HeroCarousel = memo(() => {
     return () => window.clearInterval(timerRef.current);
   }, [isPaused, next]);
 
+  // Pause when carousel is offscreen to reduce CPU
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (!e.isIntersecting) setIsPaused(true);
+        else setIsPaused(false);
+      },
+      { threshold: 0.25 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKey = (e) => {
@@ -287,6 +305,7 @@ const HeroCarousel = memo(() => {
   return (
     <div
       className="relative z-10 w-full max-w-lg shrink-0 md:ml-auto"
+      ref={containerRef}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       role="region"
@@ -297,16 +316,17 @@ const HeroCarousel = memo(() => {
         {/* Slides */}
         <div
           className="flex h-full transition-transform duration-500 ease-out"
-          style={{ transform: `translateX(-${current * 100}%)` }}
+          style={{ transform: `translateX(-${current * 100}%)`, willChange: 'transform' }}
         >
           {HERO_SLIDES.map((s, i) => (
             <div key={i} className="min-w-full h-full relative">
-              <img
+              <LazyImage
                 src={s.src}
                 alt={s.alt}
                 className="h-full w-full object-cover"
-                loading={i === 0 ? 'eager' : 'lazy'}
-                fetchPriority={i === 0 ? 'high' : 'auto'}
+                width="900"
+                height="675"
+                priority={i === 0}
               />
               {/* Price bubble per slide */}
               <div className="absolute bottom-4 left-4 rounded-xl bg-white px-4 py-3 shadow-lg">
@@ -355,7 +375,53 @@ const HeroCarousel = memo(() => {
 });
 HeroCarousel.displayName = 'HeroCarousel';
 
-// ─── Main component ───────────────────────────────────────────────────────────
+const ShopBySchoolSection = memo(() => (
+  <section aria-label="Shop by School" className="mx-auto max-w-7xl px-4 py-16 md:px-6">
+    <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <span className="inline-block rounded-full bg-[#D4A017]/10 px-3 py-1 text-xs font-semibold text-[#D4A017]">
+          Official Vendor
+        </span>
+        <h2 className="mt-2 text-3xl font-semibold text-[#1A2744]">Shop by School</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Authorised supplier for leading schools across Pakistan.
+        </p>
+      </div>
+      <Link
+        to="/school-packs"
+        className="group flex items-center gap-1 text-sm font-semibold text-[#D4A017] transition-colors duration-150 hover:opacity-80"
+      >
+        All school packs
+        <span className="transition-transform duration-150 group-hover:translate-x-1" aria-hidden="true">
+          <ArrowRight size={14} />
+        </span>
+      </Link>
+    </div>
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {SCHOOLS.map((school) => (
+        <Link
+          key={school.slug}
+          to={`/school-packs?school=${school.slug}`}
+          className="group flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 text-center transition-colors duration-150 hover:border-[#D4A017] hover:shadow-lg focus-visible:ring-2 focus-visible:ring-[#D4A017] focus-visible:ring-offset-2"
+        >
+          <div className="flex h-20 w-20 items-center justify-center rounded-full border border-slate-100 bg-[#FAF8F3] shadow-sm transition-transform duration-150 group-hover:scale-105">
+            <LazyImage
+              src={`/logos/${school.slug}.png`}
+              alt={school.name}
+              width="80"
+              height="80"
+              className="h-full w-full rounded-full object-contain p-3"
+              placeholderSrc="/roots.png"
+            />
+          </div>
+          <h3 className="mt-4 font-semibold text-[#1A2744]">{school.name}</h3>
+          <p className="mt-1 text-xs text-slate-500">{school.desc}</p>
+        </Link>
+      ))}
+    </div>
+  </section>
+));
+ShopBySchoolSection.displayName = 'ShopBySchoolSection';
 
 const HomePage = () => {
   const [featuredProducts, setFeaturedProducts] = useState(FALLBACK_PRODUCTS);
@@ -368,11 +434,13 @@ const HomePage = () => {
     setLoadingFeatured(true);
     setLoadingArrivals(true);
     setFetchError(null);
+
     try {
       const { data } = await api.get('/products', {
         params: { limit: 8, sort: 'best_rated' },
         signal,
       });
+
       if (data?.success) {
         const items = Array.isArray(data.data) ? data.data : [];
         setFeaturedProducts(items.slice(0, 4));
@@ -415,9 +483,10 @@ const HomePage = () => {
       }`;
       const skeletonCount = cols === 4 ? 4 : 6;
 
-      if (error)   return <div className={gridClass}><ErrorState message={fetchError} onRetry={handleRetry} /></div>;
+      if (error) return <div className={gridClass}><ErrorState message={fetchError} onRetry={handleRetry} /></div>;
       if (loading) return <div className={gridClass}>{[...Array(skeletonCount)].map((_, i) => <SkeletonCard key={i} />)}</div>;
       if (!products.length) return <div className={gridClass}><EmptyState /></div>;
+
       return (
         <div className={gridClass}>
           {products.map((p) => <ProductCard key={p._id || p.id} product={p} />)}
@@ -519,63 +588,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ── Shop by School ─────────────────────────────────────────────────── */}
-      <section aria-label="Shop by School" className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <span className="inline-block rounded-full bg-[#D4A017]/10 px-3 py-1 text-xs font-semibold text-[#D4A017]">
-              Official Vendor
-            </span>
-            <h2 className="mt-2 text-3xl font-semibold text-[#1A2744]">Shop by School</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Authorised supplier for leading schools across Pakistan.
-            </p>
-          </div>
-          <Link
-            to="/school-packs"
-            className="group flex items-center gap-1 text-sm font-semibold text-[#D4A017] transition-colors duration-150 hover:opacity-80"
-          >
-            All school packs
-            <span className="transition-transform duration-150 group-hover:translate-x-1" aria-hidden="true">
-              <ArrowRight size={14} />
-            </span>
-          </Link>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {SCHOOLS.map((school) => (
-            <Link
-              key={school.slug}
-              to={`/school-packs?school=${school.slug}`}
-              className="group flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 text-center transition-colors duration-150 hover:border-[#D4A017] hover:shadow-lg focus-visible:ring-2 focus-visible:ring-[#D4A017] focus-visible:ring-offset-2"
-            >
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border border-slate-100 bg-[#FAF8F3] shadow-sm transition-transform duration-150 group-hover:scale-105">
-                <img
-                  src={`/logos/${school.slug}.png`}
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  className="h-full w-full rounded-full object-contain p-3"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    e.currentTarget.parentElement.insertAdjacentHTML(
-                      'beforeend',
-                      `<span class="text-xl font-bold text-[#1A2744]">${school.name.charAt(0)}</span>`
-                    );
-                  }}
-                />
-              </div>
-              <h3 className="mt-4 font-semibold text-[#1A2744]">{school.name}</h3>
-              <p className="mt-1 text-xs text-slate-500">{school.desc}</p>
-              <span
-                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#D4A017] opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                aria-hidden="true"
-              >
-                Explore <ArrowRight size={12} />
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <ShopBySchoolSection />
 
       {/* ── Categories ─────────────────────────────────────────────────────── */}
       <section

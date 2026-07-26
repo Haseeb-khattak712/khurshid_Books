@@ -1,6 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import compression from 'compression';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -18,6 +21,26 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
+// enable gzip compression for responses
+app.use(compression());
+
+// resolve __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// serve uploaded images and static assets with cache headers
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, 'uploads'), {
+    maxAge: '30d',
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.png') || filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+        // long cache for images; immutable because filenames include timestamps
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  })
+);
 
 app.use('/api/school-packs', schoolPackRoutes);
 app.use('/api/auth', authRoutes);

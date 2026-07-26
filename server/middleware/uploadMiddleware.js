@@ -10,10 +10,13 @@ const storage = multer.diskStorage({
     cb(null, path.join(__dirname, '../uploads'));
   },
   filename(req, file, cb) {
-    cb(
-      null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
-    );
+    // include a short hash-like timestamp + original name slug to improve cache busting
+    const name = path.basename(file.originalname, path.extname(file.originalname))
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40);
+    cb(null, `${file.fieldname}-${Date.now()}-${name}${path.extname(file.originalname)}`);
   }
 });
 

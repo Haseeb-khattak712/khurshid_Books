@@ -96,7 +96,13 @@ const OrderConfirmationPage = () => {
             <div className="space-y-3">
               {order.orderItems.map((item, i) => (
                 <div key={i} className="flex items-center gap-4">
-                  <img src="/roots.png" alt={item.name} className="h-14 w-14 rounded-2xl object-cover border border-slate-100 shrink-0" />
+                  <LazyImage
+                    src="/roots.png"
+                    alt={item.name}
+                    className="h-14 w-14 rounded-2xl object-cover border border-slate-100 shrink-0"
+                    width="56"
+                    height="56"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[var(--ink)] truncate">{item.name}</p>
                     <p className="text-xs text-slate-500">Qty: {item.quantity}</p>

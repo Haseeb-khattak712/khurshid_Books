@@ -5,6 +5,7 @@ import { useAuthState } from '../hooks/useAuth.js';
 import api from '../services/api.js';
 import { toast } from 'react-hot-toast';
 import { CheckCircle2, MapPin, CreditCard, ClipboardList } from 'lucide-react';
+import LazyImage from '../components/LazyImage.jsx';
 
 const STEPS = ['Shipping', 'Payment', 'Review'];
 
@@ -274,7 +275,13 @@ const CheckoutPage = () => {
                 <div className="space-y-3">
                   {items.map((item) => (
                     <div key={item.product || item._id || item.id} className="flex items-center gap-3">
-                      <img src={item.image || '/roots.png'} alt={item.name} className="h-12 w-12 rounded-xl object-cover border border-slate-100" />
+                      <LazyImage
+                        src={item.image || '/roots.png'}
+                        alt={item.name}
+                        className="h-12 w-12 rounded-xl object-cover border border-slate-100"
+                        width="48"
+                        height="48"
+                      />
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-[var(--ink)]">{item.name}</p>
                         <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
