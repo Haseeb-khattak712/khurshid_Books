@@ -10,11 +10,12 @@ import {
   deleteProduct
 } from '../controllers/productController.js';
 import {protect,admin} from '../middleware/authMiddleware.js';
+import { cacheMiddleware } from '../utils/cache.js';
 
 const router = express.Router();
 
 router.get('/', getProducts);
-router.get('/featured', getFeaturedProducts);
+router.get('/featured', cacheMiddleware(300), getFeaturedProducts);
 router.get('/category/:cat', getProductsByCategory);
 router.get('/:id', getProductById);
 

@@ -27,7 +27,8 @@ const getProducts = asyncHandler(async (req, res) => {
   const products = await Product.find(query)
     .sort(sortOption)
     .skip((page - 1) * limit)
-    .limit(Number(limit));
+    .limit(Number(limit))
+    .lean();
 
   res.json({ success: true, count, page: Number(page), pages: Math.ceil(count / limit), data: products });
 });
@@ -36,11 +37,11 @@ const getProductById = asyncHandler(async (req, res) => {
   let product;
 
   if (mongoose.isValidObjectId(req.params.id)) {
-    product = await Product.findById(req.params.id);
+    product = await Product.findById(req.params.id).lean();
   }
 
   if (!product) {
-    product = await Product.findOne({ slug: req.params.id });
+    product = await Product.findOne({ slug: req.params.id }).lean();
   }
 
   if (product) {
@@ -52,12 +53,12 @@ const getProductById = asyncHandler(async (req, res) => {
 });
 
 const getFeaturedProducts = asyncHandler(async (req, res) => {
-  const products = await Product.find({ isFeatured: true }).sort({ createdAt: -1 }).limit(8);
+  const products = await Product.find({ isFeatured: true }).sort({ createdAt: -1 }).limit(8).lean();
   res.json({ success: true, data: products });
 });
 
 const getProductsByCategory = asyncHandler(async (req, res) => {
-  const products = await Product.find({ category: req.params.cat });
+  const products = await Product.find({ category: req.params.cat }).lean();
   res.json({ success: true, data: products });
 });
 
@@ -89,7 +90,7 @@ const createProduct = asyncHandler(async (req, res) => {
 });
 
 const updateProduct = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req.params.id);
+  const product = await Product.findById(req.params.id).lean();
 
   if (!product) {
     res.status(404);
