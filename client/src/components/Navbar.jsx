@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Heart, ShoppingBag, User, Menu, X, LogOut, ShieldAlert } from 'lucide-react';
 import { useAuthState, useAuthDispatch } from '../hooks/useAuth.js';
@@ -26,10 +26,18 @@ const Navbar = () => {
   const cartCount = useMemo(() => cartItems.reduce((acc, item) => acc + item.quantity, 0), [cartItems]);
   const wishlistCount = useMemo(() => wishlistItems.length, [wishlistItems]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     authDispatch({ type: 'LOGOUT' });
     navigate('/login');
-  };
+  }, [authDispatch, navigate]);
+
+  const toggleMobileMenu = useCallback(() => {
+    setMobileOpen((open) => !open);
+  }, []);
+
+  const closeMobileMenu = useCallback(() => {
+    setMobileOpen(false);
+  }, []);
 
   return (
     <header className="nav-glass sticky top-0 z-50">
@@ -46,7 +54,7 @@ const Navbar = () => {
         <button
           type="button"
           className="btn-icon md:hidden"
-          onClick={() => setMobileOpen((open) => !open)}
+          onClick={toggleMobileMenu}
           aria-label="Toggle menu"
         >
           {mobileOpen ? <X size={18} /> : <Menu size={18} />}
@@ -62,7 +70,7 @@ const Navbar = () => {
                 to={link.to}
                 end={link.to === '/'}
                 className={({ isActive }) => `nav-link block py-2 md:py-0 ${isActive ? 'active' : ''}`}
-                onClick={() => setMobileOpen(false)}
+                onClick={closeMobileMenu}
               >
                 {link.label}
               </NavLink>
@@ -71,7 +79,7 @@ const Navbar = () => {
               <NavLink
                 to="/admin"
                 className={({ isActive }) => `nav-link block py-2 md:py-0 text-[var(--brass)] flex items-center gap-1 ${isActive ? 'active' : ''}`}
-                onClick={() => setMobileOpen(false)}
+                onClick={closeMobileMenu}
               >
                 <ShieldAlert size={14} /> Admin
               </NavLink>

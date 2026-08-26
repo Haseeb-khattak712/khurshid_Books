@@ -1,23 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { LayoutGrid, List, Search, SlidersHorizontal } from 'lucide-react';
+import { LayoutGrid, List, Search } from 'lucide-react';
+import { useCallback, useMemo } from 'react';
 import ProductCard from '../components/ProductCard.jsx';
+import ShopFilters from '../components/ShopFilters.jsx';
 import api from '../services/api.js';
 import Spinner from '../components/Spinner.jsx';
 import useScrollReveal from '../hooks/useScrollReveal.jsx';
+import useDebounce from '../hooks/useDebounce.js';
 
-const CATEGORIES = [
-  'Books',
-  'Notebooks',
-  'Pens',
-  'Art Supplies',
-  'Office Supplies',
-  'Bags',
-  'Calculators',
-  'Geometry',
-  'Paper Products',
-  'Gift Items'
-];
 
 const ShopPage = () => {
   const [viewGrid, setViewGrid] = useState(true);
@@ -37,13 +28,15 @@ const ShopPage = () => {
   const [pages, setPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
+  const debouncedPrice = useDebounce(price, 300);
+
   // Trigger animation hook
   useScrollReveal([page, products]);
 
   // Sync category param with page state
   useEffect(() => {
     setPage(1);
-  }, [categoryParam, rating, sort, price]);
+  }, [categoryParam, rating, sort, debouncedPrice]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -53,7 +46,7 @@ const ShopPage = () => {
           page,
           limit: 9,
           sort,
-          maxPrice: price
+          maxPrice: debouncedPrice
         };
         
         if (categoryParam) params.category = categoryParam;
@@ -73,15 +66,10 @@ const ShopPage = () => {
       }
     };
 
-    // Debounce pricing inputs if needed, or simply fetch products on state changes
-    const timer = setTimeout(() => {
-      fetchProducts();
-    }, 300);
+    fetchProducts();
+  }, [categoryParam, searchParam, debouncedPrice, rating, sort, page]);
 
-    return () => clearTimeout(timer);
-  }, [categoryParam, searchParam, price, rating, sort, page]);
-
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = useCallback((e) => {
     e.preventDefault();
     setSearchParams((prev) => {
       if (search) {
@@ -93,9 +81,9 @@ const ShopPage = () => {
       return prev;
     });
     setPage(1);
-  };
+  }, [search, setSearchParams]);
 
-  const handleCategoryChange = (cat) => {
+  const handleCategoryChange = useCallback((cat) => {
     setSearchParams((prev) => {
       if (categoryParam === cat) {
         prev.delete('category');
@@ -105,7 +93,7 @@ const ShopPage = () => {
       prev.set('page', '1');
       return prev;
     });
-  };
+  }, [categoryParam, setSearchParams]);
 
   return (
     <main>
@@ -160,75 +148,14 @@ const ShopPage = () => {
       <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
         <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
           {/* Filters Sidebar */}
-          <aside className="surface-raised h-fit p-5 lg:sticky lg:top-24">
-            <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
-              <SlidersHorizontal size={16} className="text-[var(--brass)]" />
-              <h2 className="font-serif text-xl font-semibold text-[var(--ink)]">Filters</h2>
-            </div>
-            <div className="mt-5 space-y-6">
-              {/* Category Filter */}
-              <div>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Category</h3>
-                <div className="max-h-60 overflow-y-auto pr-1 space-y-2 text-sm text-[var(--text)]">
-                  {CATEGORIES.map((cat) => (
-                    <label key={cat} className="flex cursor-pointer items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        className="accent-[var(--brass)]"
-                        checked={categoryParam === cat}
-                        onChange={() => handleCategoryChange(cat)}
-                      />
-                      {cat}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Filter */}
-              <div>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Max Price</h3>
-                <input
-                  type="range"
-                  min="50"
-                  max="10000"
-                  step="50"
-                  value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
-                  className="w-full accent-[var(--brass)]"
-                />
-                <p className="mt-2 text-xs font-semibold text-[var(--text)]">Up to Rs. {price.toLocaleString()}</p>
-              </div>
-
-              {/* Rating Filter */}
-              <div>
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Rating</h3>
-                <div className="space-y-2 text-sm">
-                  {[4, 3, 2].map((rate) => (
-                    <label key={rate} className="flex cursor-pointer items-center gap-2.5">
-                      <input
-                        type="radio"
-                        name="rating"
-                        className="accent-[var(--brass)]"
-                        checked={Number(rating) === rate}
-                        onChange={() => setRating(rate.toString())}
-                      />
-                      {rate} stars &amp; up
-                    </label>
-                  ))}
-                  <label className="flex cursor-pointer items-center gap-2.5">
-                    <input
-                      type="radio"
-                      name="rating"
-                      className="accent-[var(--brass)]"
-                      checked={rating === ''}
-                      onChange={() => setRating('')}
-                    />
-                    Any rating
-                  </label>
-                </div>
-              </div>
-            </div>
-          </aside>
+          <ShopFilters 
+            categoryParam={categoryParam} 
+            handleCategoryChange={handleCategoryChange}
+            price={price}
+            setPrice={setPrice}
+            rating={rating}
+            setRating={setRating}
+          />
 
           {/* Product Section */}
           <section>
