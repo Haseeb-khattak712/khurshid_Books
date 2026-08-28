@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Package, Truck, Clock } from 'lucide-react';
 import { supabase } from '../services/supabase.js';
 import Spinner from '../components/Spinner.jsx';
@@ -18,17 +18,34 @@ const OrderConfirmationPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('session_id');
+  const [verifying, setVerifying] = useState(!!sessionId);
+
   useEffect(() => {
-    const fetchOrder = async () => {
+    const verifyAndFetch = async () => {
+      if (sessionId && verifying) {
+        try {
+          await fetch('/api/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId, order_id: id }),
+          });
+        } catch (e) {
+          console.error('Verification failed', e);
+        }
+        setVerifying(false);
+      }
+
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data, error: fetchError } = await supabase
           .from('orders')
           .select('*, order_items(*)')
           .eq('id', id)
           .single();
           
-        if (error) throw error;
+        if (fetchError) throw fetchError;
 
         if (data) {
           setOrder(data);
@@ -41,10 +58,11 @@ const OrderConfirmationPage = () => {
         setLoading(false);
       }
     };
-    fetchOrder();
-  }, [id]);
 
-  if (loading) {
+    verifyAndFetch();
+  }, [id, sessionId, verifying]);
+
+  if (loading || verifying) {
     return <div className="py-20 bg-[#FAF8F3]"><Spinner /></div>;
   }
 
@@ -136,7 +154,10 @@ const OrderConfirmationPage = () => {
             </div>
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Payment</h3>
-              <p className="text-sm text-[var(--ink)]">{order.payment_method}</p>
+              <p className="text-sm text-[var(--ink)] flex items-center gap-2">
+                {order.payment_method} 
+                {order.is_paid && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">PAID</span>}
+              </p>
               <div className="mt-3 space-y-1 text-sm text-slate-600">
                 <div className="flex justify-between">
                   <span>Subtotal</span>

@@ -85,11 +85,37 @@ const CheckoutPage = () => {
 
       if (orderError) throw orderError;
 
+      if (paymentMethod === 'Credit/Debit Card (Stripe)') {
+        // Create Stripe checkout session
+        const response = await fetch('/api/create-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: order.id,
+            items,
+            userEmail: user.email,
+          }),
+        });
+        const { url, error: stripeError } = await response.json();
+        if (stripeError) throw new Error(stripeError);
+        
+        clearCart();
+        window.location.href = url; // Redirect to Stripe
+        return; // Don't execute the rest
+      }
+
+      // If Cash on Delivery, send the email and go to success page
+      await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id }),
+      });
+
       clearCart();
       toast.success('Order placed successfully!');
       navigate(`/order/${order.id}`);
     } catch (error) {
-      console.error('Place order error:', error.message);
+      console.error('Place order error:', error);
       toast.error(
         error.message || 'Server error. Please try again later.'
       );
@@ -222,7 +248,7 @@ const CheckoutPage = () => {
                   Payment Method
                 </h2>
                 <div className="space-y-3">
-                  {['Cash on Delivery'].map((method) => {
+                  {['Cash on Delivery', 'Credit/Debit Card (Stripe)'].map((method) => {
                     const disabled = false;
                     return (
                       <label
