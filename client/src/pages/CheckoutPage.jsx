@@ -47,6 +47,11 @@ const CheckoutPage = () => {
       return;
     }
 
+    if (user.role === 'admin') {
+      toast.error('Admins cannot place orders');
+      return;
+    }
+
     if (items.length === 0) {
       toast.error('Your cart is empty');
       return;

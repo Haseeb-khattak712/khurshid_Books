@@ -229,14 +229,24 @@ const ProductDetailPage = () => {
                 </button>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={product.stock === 0}
-                className="flex items-center gap-2 rounded-full bg-[#D4A017] px-8 py-3 text-sm font-bold text-[#1A2744] shadow-lg transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ShoppingCart size={18} />
-                {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-              </button>
+              {user?.role === 'admin' ? (
+                <button
+                  disabled
+                  className="flex items-center gap-2 rounded-full bg-slate-200 px-8 py-3 text-sm font-bold text-slate-500 shadow-sm cursor-not-allowed"
+                >
+                  <ShoppingCart size={18} />
+                  Admins cannot buy
+                </button>
+              ) : (
+                <button
+                  onClick={handleAddToCart}
+                  disabled={product.stock === 0}
+                  className="flex items-center gap-2 rounded-full bg-[#D4A017] px-8 py-3 text-sm font-bold text-[#1A2744] shadow-lg transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ShoppingCart size={18} />
+                  {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                </button>
+              )}
 
               <button
                 onClick={handleWishlistToggle}
