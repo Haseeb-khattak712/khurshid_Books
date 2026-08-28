@@ -3,6 +3,7 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Package, Truck, Clock } from 'lucide-react';
 import { supabase } from '../services/supabase.js';
 import Spinner from '../components/Spinner.jsx';
+import LazyImage from '../components/LazyImage.jsx';
 
 const STATUS_CONFIG = {
   pending:    { label: 'Pending',    color: 'text-amber-600 bg-amber-50 border-amber-200',    icon: Clock },
