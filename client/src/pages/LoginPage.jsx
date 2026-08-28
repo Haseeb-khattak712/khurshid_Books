@@ -33,7 +33,14 @@ const LoginPage = () => {
       
       let redirectPath = from;
       if (data.user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+        
+        // Force update the global state with the profile so AdminRoute doesn't fail
+        dispatch({
+          type: 'UPDATE_USER',
+          payload: { ...data.user, ...(profile || {}) }
+        });
+
         if (profile?.role === 'admin') {
           redirectPath = '/admin';
         }
