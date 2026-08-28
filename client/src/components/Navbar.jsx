@@ -51,14 +51,7 @@ const Navbar = () => {
           </span>
         </Link>
 
-        <button
-          type="button"
-          className="btn-icon md:hidden"
-          onClick={toggleMobileMenu}
-          aria-label="Toggle menu"
-        >
-          {mobileOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
+
 
         <nav
           className={`absolute inset-x-4 top-[calc(100%+0.5rem)] z-40 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--cream)]/95 p-5 shadow-[var(--shadow-lift)] backdrop-blur-xl md:static md:inset-auto md:flex md:flex-1 md:justify-center md:border-0 md:bg-transparent md:p-0 md:shadow-none ${mobileOpen ? 'block' : 'hidden md:flex'}`}
@@ -132,6 +125,15 @@ const Navbar = () => {
               <User size={17} />
             </Link>
           )}
+
+          <button
+            type="button"
+            className="btn-icon md:hidden ml-1"
+            onClick={toggleMobileMenu}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
         </div>
       </div>
     </header>
