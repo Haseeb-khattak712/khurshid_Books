@@ -41,7 +41,7 @@ const OrderConfirmationPage = () => {
       try {
         const { data, error: fetchError } = await supabase
           .from('orders')
-          .select('*, order_items(*)')
+          .select('*')
           .eq('id', id)
           .single();
           
@@ -78,7 +78,8 @@ const OrderConfirmationPage = () => {
     );
   }
 
-  const statusInfo = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+  const computedStatus = order.is_delivered ? 'delivered' : (order.is_paid ? 'processing' : 'pending');
+  const statusInfo = STATUS_CONFIG[computedStatus] || STATUS_CONFIG.pending;
   const StatusIcon = statusInfo.icon;
 
   return (
