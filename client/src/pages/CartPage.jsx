@@ -58,8 +58,8 @@ const CartPage = () => {
         ) : (
           <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_0.6fr]">
             <div className="space-y-4">
-              {items.map((item) => (
-                <div key={item.product || item._id || item.id} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center justify-between">
+              {items.map((item, index) => (
+                <div key={item.product || item._id || item.id || index} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center justify-between">
                   <div className="flex items-center gap-4">
                     <LazyImage
                       src={item.images && item.images.length > 0 ? (item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`) : item.image || '/roots.png'}

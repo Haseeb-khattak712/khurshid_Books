@@ -19,7 +19,7 @@ const AdminDashboard = () => {
         const { count: totalOrders } = await supabase.from('orders').select('*', { count: 'exact', head: true });
         const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
         
-        const { data: allOrders } = await supabase.from('orders').select('total_price, created_at, status').neq('status', 'cancelled');
+        const { data: allOrders } = await supabase.from('orders').select('total_price, created_at, is_paid');
         
         let revenueThisMonth = 0;
         const currentMonth = new Date().getMonth() + 1;
