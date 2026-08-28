@@ -483,18 +483,16 @@ const HomePage = () => {
     setFetchError(null);
 
     try {
-      const { data: items, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('ratings', { ascending: false })
-        .limit(8);
+      const [featuredRes, arrivalsRes] = await Promise.all([
+        supabase.from('products').select('*').order('ratings', { ascending: false }).limit(4),
+        supabase.from('products').select('*').order('created_at', { ascending: false }).limit(6)
+      ]);
 
-      if (error) throw error;
+      if (featuredRes.error) throw featuredRes.error;
+      if (arrivalsRes.error) throw arrivalsRes.error;
 
-      if (items) {
-        setFeaturedProducts(items.slice(0, 4));
-        setNewArrivals(items.slice(0, 6));
-      }
+      if (featuredRes.data) setFeaturedProducts(featuredRes.data);
+      if (arrivalsRes.data) setNewArrivals(arrivalsRes.data);
     } catch (err) {
       if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
         setFeaturedProducts(FALLBACK_PRODUCTS);
