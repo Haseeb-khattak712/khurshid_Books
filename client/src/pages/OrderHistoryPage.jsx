@@ -25,7 +25,7 @@ const OrderHistoryPage = () => {
       try {
         const { data, error } = await supabase
           .from('orders')
-          .select('*, order_items(*)')
+          .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -86,10 +86,11 @@ const OrderHistoryPage = () => {
 
             <div className="divide-y divide-slate-100">
               {orders.map((order) => {
-                const statusStyle = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
+                const computedStatus = order.is_delivered ? 'delivered' : (order.is_paid ? 'processing' : 'pending');
+                const statusStyle = STATUS_STYLES[computedStatus] || STATUS_STYLES.pending;
                 return (
                   <div
-                    key={order._id}
+                    key={order.id}
                     className="grid grid-cols-1 gap-3 px-6 py-5 hover:bg-slate-50 transition sm:grid-cols-[1fr_120px_120px_120px_100px] sm:items-center sm:gap-4"
                   >
                     {/* Order ID + items count */}
@@ -117,7 +118,7 @@ const OrderHistoryPage = () => {
                     {/* Status badge */}
                     <div className="sm:text-center">
                       <span className={`inline-block rounded-full border px-3 py-0.5 text-xs font-semibold capitalize ${statusStyle}`}>
-                        {order.status}
+                        {computedStatus}
                       </span>
                     </div>
 
