@@ -56,10 +56,19 @@ const CheckoutPage = () => {
     try {
       const shippingAddress = { street, city, province, postalCode, country };
 
+      const orderItemsData = items.map((item) => ({
+        product_id: item.product || item._id || item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.images && item.images.length > 0 ? item.images[0] : item.image || '/roots.png'
+      }));
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user.id,
+          order_items: orderItemsData,
           total_price: total,
           shipping_address: shippingAddress,
           payment_method: paymentMethod,
@@ -70,21 +79,6 @@ const CheckoutPage = () => {
         .single();
 
       if (orderError) throw orderError;
-
-      const orderItems = items.map((item) => ({
-        order_id: order.id,
-        product_id: item.product || item._id || item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        image: item.images && item.images.length > 0 ? item.images[0] : item.image || '/roots.png'
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
 
       clearCart();
       toast.success('Order placed successfully!');
