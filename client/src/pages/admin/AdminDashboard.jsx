@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Package, ShoppingCart, Users, TrendingUp, ArrowRight, School } from 'lucide-react';
-import api from '../../services/api.js';
+import { supabase } from '../../services/supabase.js';
 import Spinner from '../../components/Spinner.jsx';
 
 const MONTH_NAMES = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -15,10 +15,47 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const { data } = await api.get('/admin/dashboard');
-        if (data.success) {
-          setStats(data.data);
-        }
+        const { count: totalProducts } = await supabase.from('products').select('*', { count: 'exact', head: true });
+        const { count: totalOrders } = await supabase.from('orders').select('*', { count: 'exact', head: true });
+        const { count: totalUsers } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+        
+        const { data: allOrders } = await supabase.from('orders').select('total_price, created_at, status').neq('status', 'cancelled');
+        
+        let revenueThisMonth = 0;
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        
+        const monthlyMap = {};
+        
+        allOrders?.forEach(order => {
+          const d = new Date(order.created_at);
+          const m = d.getMonth() + 1;
+          const y = d.getFullYear();
+          if (m === currentMonth && y === currentYear) {
+            revenueThisMonth += Number(order.total_price) || 0;
+          }
+          
+          const key = `${y}-${m.toString().padStart(2, '0')}`;
+          monthlyMap[key] = (monthlyMap[key] || 0) + (Number(order.total_price) || 0);
+        });
+
+        const sortedKeys = Object.keys(monthlyMap).sort();
+        const last6 = sortedKeys.slice(-6);
+        const monthlyRevenue = last6.map(k => {
+          const [y, m] = k.split('-');
+          return {
+            _id: { month: parseInt(m, 10), year: parseInt(y, 10) },
+            revenue: monthlyMap[k]
+          };
+        }).reverse();
+
+        setStats({
+          totalProducts: totalProducts || 0,
+          totalOrders: totalOrders || 0,
+          totalUsers: totalUsers || 0,
+          revenueThisMonth,
+          monthlyRevenue
+        });
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
       } finally {
@@ -119,7 +156,7 @@ const AdminDashboard = () => {
             { label: 'Manage Products', to: '/admin/products', desc: 'Add, edit, or remove products from the catalogue.' },
             { label: 'Manage Orders', to: '/admin/orders', desc: 'Track and update order statuses for all customers.' },
             { label: 'Manage Users', to: '/admin/users', desc: 'View registered users and manage access.' },
-            { label: 'School Packs', to: '/admin/school-packs', desc: 'Create and manage school book packs with bundled products.' },
+            { label: 'School Packs', to: '/admin/products?search=pack', desc: 'Create and manage school book packs with bundled products.' },
           ].map((item) => (
             <Link key={item.to} to={item.to} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition group">
               <div className="flex items-center gap-2 mb-2">

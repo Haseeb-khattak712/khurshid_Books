@@ -12,7 +12,7 @@ const ProductCard = ({ product }) => {
       <Link to={`/product/${product.slug}`} className="card-3d-inner surface-raised flex h-full flex-col overflow-hidden">
         <div className="relative h-56 overflow-hidden bg-[var(--paper)]">
           <LazyImage
-            src="/roots.png"
+            src={product.images && product.images.length > 0 ? (product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`) : '/roots.png'}
             alt={product.name}
             className="h-full w-full object-cover"
             width="400"

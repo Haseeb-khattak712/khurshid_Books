@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import { useAuthDispatch, useAuthState } from '../hooks/useAuth.js';
 
 const RegisterPage = () => {
@@ -28,15 +28,22 @@ const RegisterPage = () => {
     setLoading(true);
     try {
       dispatch({ type: 'LOGIN_REQUEST' });
-      const { data } = await api.post('/auth/register', { name, email, password });
-      if (data.success) {
-        dispatch({ type: 'LOGIN_SUCCESS', payload: { user: data.data, token: data.data.token } });
-        toast.success(`Registered successfully! Welcome, ${data.data.name}`);
-        navigate('/');
-      }
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+          }
+        }
+      });
+      if (error) throw error;
+      
+      toast.success(`Registered successfully! Welcome, ${name}`);
+      navigate('/');
     } catch (error) {
       dispatch({ type: 'LOGOUT' });
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }

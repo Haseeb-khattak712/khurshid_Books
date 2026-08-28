@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PackageOpen } from 'lucide-react';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import Spinner from '../components/Spinner.jsx';
 import { useAuthState } from '../hooks/useAuth.js';
 
@@ -23,12 +23,16 @@ const OrderHistoryPage = () => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const { data } = await api.get('/orders/my-orders');
-        if (data.success) {
-          setOrders(data.data);
-        }
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setOrders(data || []);
       } catch (error) {
-        console.error('Failed to fetch orders:', error);
+        console.error('Failed to fetch orders:', error.message);
       } finally {
         setLoading(false);
       }
@@ -90,15 +94,15 @@ const OrderHistoryPage = () => {
                   >
                     {/* Order ID + items count */}
                     <div>
-                      <p className="font-mono text-xs text-[var(--text-muted)] truncate max-w-[240px]">#{order._id}</p>
+                      <p className="font-mono text-xs text-[var(--text-muted)] truncate max-w-[240px]">#{order.id}</p>
                       <p className="mt-1 text-sm font-semibold text-[var(--ink)]">
-                        {order.orderItems.length} item{order.orderItems.length !== 1 ? 's' : ''}
+                        {order.order_items?.length} item{order.order_items?.length !== 1 ? 's' : ''}
                       </p>
                     </div>
 
                     {/* Date */}
                     <p className="text-xs text-slate-500 sm:text-center">
-                      {new Date(order.createdAt).toLocaleDateString('en-PK', {
+                      {new Date(order.created_at).toLocaleDateString('en-PK', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
@@ -107,7 +111,7 @@ const OrderHistoryPage = () => {
 
                     {/* Total */}
                     <p className="text-sm font-bold text-[var(--ink)] sm:text-right">
-                      Rs. {order.totalPrice?.toLocaleString()}
+                      Rs. {order.total_price?.toLocaleString()}
                     </p>
 
                     {/* Status badge */}
@@ -120,7 +124,7 @@ const OrderHistoryPage = () => {
                     {/* View button */}
                     <div className="sm:text-center">
                       <Link
-                        to={`/order/${order._id}`}
+                        to={`/order/${order.id}`}
                         className="inline-block rounded-full border border-[#D4A017] px-4 py-1.5 text-xs font-semibold text-[#1A2744] hover:bg-[#D4A017]/10 transition"
                       >
                         View

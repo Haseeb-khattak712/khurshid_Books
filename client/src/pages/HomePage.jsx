@@ -43,7 +43,7 @@ import {
 } from 'lucide-react';
 import ProductCard from '../components/ProductCard.jsx';
 import LazyImage from '../components/LazyImage.jsx';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
@@ -436,13 +436,15 @@ const HomePage = () => {
     setFetchError(null);
 
     try {
-      const { data } = await api.get('/products', {
-        params: { limit: 8, sort: 'best_rated' },
-        signal,
-      });
+      const { data: items, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('ratings', { ascending: false })
+        .limit(8);
 
-      if (data?.success) {
-        const items = Array.isArray(data.data) ? data.data : [];
+      if (error) throw error;
+
+      if (items) {
         setFeaturedProducts(items.slice(0, 4));
         setNewArrivals(items.slice(0, 6));
       }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCartState, useCartDispatch } from '../context/CartContext.jsx';
 import { useAuthState } from '../hooks/useAuth.js';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import { toast } from 'react-hot-toast';
 import { CheckCircle2, MapPin, CreditCard, ClipboardList } from 'lucide-react';
 import LazyImage from '../components/LazyImage.jsx';
@@ -54,43 +54,45 @@ const CheckoutPage = () => {
 
     setLoading(true);
     try {
+      const shippingAddress = { street, city, province, postalCode, country };
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          total_price: total,
+          shipping_address: shippingAddress,
+          payment_method: paymentMethod,
+          is_paid: false,
+          is_delivered: false,
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
       const orderItems = items.map((item) => ({
-        product: item.product || item._id || item.id, // defensive fallback
+        order_id: order.id,
+        product_id: item.product || item._id || item.id,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        image: item.image || '/roots.png'
+        image: item.images && item.images.length > 0 ? item.images[0] : item.image || '/roots.png'
       }));
 
-      const shippingAddress = { street, city, province, postalCode, country };
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
 
-      const { data } = await api.post('/orders', {
-        orderItems,
-        shippingAddress,
-        paymentMethod
-      });
+      if (itemsError) throw itemsError;
 
-      if (!data?.success) {
-        toast.error(data?.message || 'Order could not be placed. Please try again.');
-        return;
-      }
-
-      const orderId = data?.data?._id || data?.data?.id || data?._id;
-      if (!orderId) {
-        toast.error('Order created but ID missing. Check your orders page.');
-        return;
-      }
-
-      clearCart(); // <-- FIX: use helper, not cartDispatch({ type: 'CLEAR_CART' })
+      clearCart();
       toast.success('Order placed successfully!');
-      navigate(`/order/${orderId}`);
+      navigate(`/order/${order.id}`);
     } catch (error) {
-      console.error('Place order error:', error.response?.data || error.message);
+      console.error('Place order error:', error.message);
       toast.error(
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        'Server error. Please try again later.'
+        error.message || 'Server error. Please try again later.'
       );
     } finally {
       setLoading(false);
@@ -221,8 +223,8 @@ const CheckoutPage = () => {
                   Payment Method
                 </h2>
                 <div className="space-y-3">
-                  {['Cash on Delivery', 'Card (Coming Soon)'].map((method) => {
-                    const disabled = method === 'Card (Coming Soon)';
+                  {['Cash on Delivery'].map((method) => {
+                    const disabled = false;
                     return (
                       <label
                         key={method}
@@ -276,7 +278,7 @@ const CheckoutPage = () => {
                   {items.map((item) => (
                     <div key={item.product || item._id || item.id} className="flex items-center gap-3">
                       <LazyImage
-                        src={item.image || '/roots.png'}
+                        src={item.images && item.images.length > 0 ? item.images[0] : item.image || '/roots.png'}
                         alt={item.name}
                         className="h-12 w-12 rounded-xl object-cover border border-slate-100"
                         width="48"

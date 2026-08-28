@@ -116,7 +116,7 @@ const Navbar = () => {
             <div className="flex items-center gap-2 border-l border-[var(--line)] pl-3">
               <Link to="/profile" className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--brass)] transition">
                 <User size={15} />
-                <span className="hidden sm:inline">{user.name.split(' ')[0]}</span>
+                <span className="hidden sm:inline">{(user.full_name || user.name || 'User').split(' ')[0]}</span>
               </Link>
               <button
                 type="button"

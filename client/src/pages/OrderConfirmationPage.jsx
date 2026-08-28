@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CheckCircle2, Package, Truck, Clock } from 'lucide-react';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import Spinner from '../components/Spinner.jsx';
 
 const STATUS_CONFIG = {
@@ -22,14 +22,21 @@ const OrderConfirmationPage = () => {
     const fetchOrder = async () => {
       setLoading(true);
       try {
-        const { data } = await api.get(`/orders/${id}`);
-        if (data.success) {
-          setOrder(data.data);
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('id', id)
+          .single();
+          
+        if (error) throw error;
+
+        if (data) {
+          setOrder(data);
         } else {
           setError('Order not found');
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load order details');
+        setError(err.message || 'Failed to load order details');
       } finally {
         setLoading(false);
       }
@@ -74,12 +81,12 @@ const OrderConfirmationPage = () => {
           <div className="grid gap-4 sm:grid-cols-3 text-sm border-b border-[var(--line)] pb-5">
             <div>
               <p className="text-[var(--text-muted)] mb-1">Order ID</p>
-              <p className="font-semibold text-[var(--ink)] font-mono text-xs">{order._id}</p>
+              <p className="font-semibold text-[var(--ink)] font-mono text-xs">{order.id}</p>
             </div>
             <div>
               <p className="text-[var(--text-muted)] mb-1">Date</p>
               <p className="font-semibold text-[var(--ink)]">
-                {new Date(order.createdAt).toLocaleDateString('en-PK', { year: 'numeric', month: 'short', day: 'numeric' })}
+                {new Date(order.created_at).toLocaleDateString('en-PK', { year: 'numeric', month: 'short', day: 'numeric' })}
               </p>
             </div>
             <div>
@@ -94,7 +101,7 @@ const OrderConfirmationPage = () => {
           <div>
             <h2 className="font-serif text-lg font-semibold text-[var(--ink)] mb-4">Items Ordered</h2>
             <div className="space-y-3">
-              {order.orderItems.map((item, i) => (
+              {order.order_items?.map((item, i) => (
                 <div key={i} className="flex items-center gap-4">
                   <LazyImage
                     src="/roots.png"
@@ -120,32 +127,32 @@ const OrderConfirmationPage = () => {
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Shipping To</h3>
               <p className="text-sm text-[var(--ink)]">
-                {order.shippingAddress?.street}, {order.shippingAddress?.city}
+                {order.shipping_address?.street}, {order.shipping_address?.city}
                 <br />
-                {order.shippingAddress?.province} {order.shippingAddress?.postalCode}
+                {order.shipping_address?.province} {order.shipping_address?.postalCode}
                 <br />
-                {order.shippingAddress?.country}
+                {order.shipping_address?.country}
               </p>
             </div>
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Payment</h3>
-              <p className="text-sm text-[var(--ink)]">{order.paymentMethod}</p>
+              <p className="text-sm text-[var(--ink)]">{order.payment_method}</p>
               <div className="mt-3 space-y-1 text-sm text-slate-600">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>Rs. {order.subtotal?.toLocaleString()}</span>
+                  <span>Rs. {(order.total_price - 150).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>{order.shippingPrice === 0 ? 'Free' : `Rs. ${order.shippingPrice}`}</span>
+                  <span>{order.total_price >= 1500 ? 'Free' : `Rs. 150`}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tax</span>
-                  <span>Rs. {order.taxPrice?.toLocaleString()}</span>
+                  <span>Included</span>
                 </div>
                 <div className="flex justify-between font-bold text-[var(--ink)] border-t border-slate-100 pt-1 mt-1">
                   <span>Total</span>
-                  <span>Rs. {order.totalPrice?.toLocaleString()}</span>
+                  <span>Rs. {order.total_price?.toLocaleString()}</span>
                 </div>
               </div>
             </div>

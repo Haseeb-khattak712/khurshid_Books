@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { LayoutGrid, List, Search } from 'lucide-react';
+import { LayoutGrid, List, Search, Filter, X } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import ProductCard from '../components/ProductCard.jsx';
 import ShopFilters from '../components/ShopFilters.jsx';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import Spinner from '../components/Spinner.jsx';
 import useScrollReveal from '../hooks/useScrollReveal.jsx';
 import useDebounce from '../hooks/useDebounce.js';
@@ -12,6 +12,7 @@ import useDebounce from '../hooks/useDebounce.js';
 
 const ShopPage = () => {
   const [viewGrid, setViewGrid] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Search & Filters state
@@ -42,23 +43,30 @@ const ShopPage = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const params = {
-          page,
-          limit: 9,
-          sort,
-          maxPrice: debouncedPrice
-        };
-        
-        if (categoryParam) params.category = categoryParam;
-        if (searchParam) params.search = searchParam;
-        if (rating) params.rating = rating;
+        let query = supabase.from('products').select('*', { count: 'exact' });
 
-        const { data } = await api.get('/products', { params });
-        if (data.success) {
-          setProducts(data.data);
-          setPages(data.pages);
-          setTotalCount(data.count);
-        }
+        if (categoryParam) query = query.eq('category', categoryParam);
+        if (searchParam) query = query.ilike('name', `%${searchParam}%`);
+        if (rating) query = query.gte('ratings', Number(rating));
+        if (debouncedPrice) query = query.lte('price', Number(debouncedPrice));
+
+        if (sort === 'newest') query = query.order('created_at', { ascending: false });
+        else if (sort === 'price_asc') query = query.order('price', { ascending: true });
+        else if (sort === 'price_desc') query = query.order('price', { ascending: false });
+        else if (sort === 'popular') query = query.order('num_reviews', { ascending: false });
+        else if (sort === 'best_rated') query = query.order('ratings', { ascending: false });
+
+        const limit = 9;
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+        query = query.range(from, to);
+
+        const { data, count, error } = await query;
+        if (error) throw error;
+
+        setProducts(data || []);
+        setPages(Math.ceil((count || 0) / limit));
+        setTotalCount(count || 0);
       } catch (error) {
         console.error('Error fetching products:', error);
       } finally {
@@ -124,6 +132,15 @@ const ShopPage = () => {
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
               </form>
 
+              <button
+                type="button"
+                className="lg:hidden flex items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-1.5 text-sm font-medium transition bg-[var(--paper-warm)] text-[var(--ink)] shadow-sm border border-[var(--line)]"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                {showFilters ? <X size={15} /> : <Filter size={15} />}
+                {showFilters ? 'Close' : 'Filters'}
+              </button>
+
               <div className="surface flex w-fit gap-1 p-1">
                 <button
                   type="button"
@@ -148,14 +165,16 @@ const ShopPage = () => {
       <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
         <div className="grid gap-8 lg:grid-cols-[260px_1fr]">
           {/* Filters Sidebar */}
-          <ShopFilters 
-            categoryParam={categoryParam} 
-            handleCategoryChange={handleCategoryChange}
-            price={price}
-            setPrice={setPrice}
-            rating={rating}
-            setRating={setRating}
-          />
+          <div className={`lg:block ${showFilters ? 'block' : 'hidden'}`}>
+            <ShopFilters 
+              categoryParam={categoryParam} 
+              handleCategoryChange={handleCategoryChange}
+              price={price}
+              setPrice={setPrice}
+              rating={rating}
+              setRating={setRating}
+            />
+          </div>
 
           {/* Product Section */}
           <section>
@@ -188,7 +207,7 @@ const ShopPage = () => {
             ) : (
               <div className={viewGrid ? 'grid gap-5 md:grid-cols-2 xl:grid-cols-3' : 'space-y-4'}>
                 {products.map((product) => (
-                  <ProductCard key={product._id} product={product} />
+                  <ProductCard key={product.id || product._id} product={product} />
                 ))}
               </div>
             )}

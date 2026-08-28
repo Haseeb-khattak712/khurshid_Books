@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, Star, ArrowLeft, Plus, Search, Pencil, X } from 'lucide-react';
-import api from '../../services/api.js';
+import { supabase } from '../../services/supabase.js';
 import Spinner from '../../components/Spinner.jsx';
 import { toast } from 'react-hot-toast';
 
@@ -48,14 +48,22 @@ const ManageProducts = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const params = { page, limit: 12 };
-      if (search) params.search = search;
-      const { data } = await api.get('/products', { params });
-      if (data.success) {
-        setProducts(data.data);
-        setPages(data.pages);
-        setTotalCount(data.count);
+      const limit = 12;
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase.from('products').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+      
+      if (search) {
+        query = query.ilike('name', `%${search}%`);
       }
+
+      const { data, count, error } = await query.range(from, to);
+      if (error) throw error;
+
+      setProducts(data || []);
+      setPages(Math.ceil((count || 0) / limit));
+      setTotalCount(count || 0);
     } catch (error) {
       console.error('Failed to fetch products:', error);
     } finally {
@@ -71,11 +79,39 @@ const ManageProducts = () => {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
     try {
-      await api.delete(`/products/${id}`);
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
       toast.success(`"${name}" deleted`);
       fetchProducts();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete product');
+      toast.error(error.message || 'Failed to delete product');
+    }
+  };
+
+  const uploadFileHandler = async (e, setFormFunc) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const toastId = toast.loading('Uploading image...');
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      setFormFunc((prev) => ({ ...prev, images: publicUrl }));
+      toast.success('Image uploaded successfully', { id: toastId });
+    } catch (error) {
+      console.error(error);
+      toast.error('Image upload failed', { id: toastId });
     }
   };
 
@@ -91,7 +127,7 @@ const ManageProducts = () => {
       brand: product.brand || '',
       stock: product.stock || '',
       images: product.images?.[0] || product.image || '',
-      isFeatured: product.isFeatured || false,
+      isFeatured: product.is_featured || product.isFeatured || false,
     });
     setShowForm(false); // Close add form if open
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -120,16 +156,22 @@ const ManageProducts = () => {
         ...editForm,
         price: Number(editForm.price),
         stock: Number(editForm.stock),
-        images: editForm.images ? [editForm.images] : ['/roots.png'],
+        images: editForm.images ? [editForm.images] : [],
+        is_featured: editForm.isFeatured,
       };
-      const { data } = await api.put(`/products/${editingProduct._id}`, payload);
-      if (data.success) {
-        toast.success('Product updated successfully');
-        setEditingProduct(null);
-        fetchProducts();
-      }
+      delete payload.isFeatured;
+      const { error } = await supabase
+        .from('products')
+        .update(payload)
+        .eq('id', editingProduct.id || editingProduct._id);
+        
+      if (error) throw error;
+
+      toast.success('Product updated successfully');
+      setEditingProduct(null);
+      fetchProducts();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update product');
+      toast.error(error.message || 'Failed to update product');
     } finally {
       setSubmitting(false);
     }
@@ -141,21 +183,27 @@ const ManageProducts = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const slug = newProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
       const payload = {
         ...newProduct,
+        slug,
         price: Number(newProduct.price),
         stock: Number(newProduct.stock),
-        images: ['/roots.png'],
+        images: newProduct.images ? [newProduct.images] : [],
+        is_featured: newProduct.isFeatured,
       };
-      const { data } = await api.post('/products', payload);
-      if (data.success) {
-        toast.success('Product created successfully');
-        setShowForm(false);
-        setNewProduct({ name: '', description: '', price: '', category: 'Notebooks', brand: '', stock: '', images: '', isFeatured: false });
-        fetchProducts();
-      }
+      delete payload.isFeatured;
+      
+      const { error } = await supabase.from('products').insert([payload]);
+      
+      if (error) throw error;
+      
+      toast.success('Product created successfully');
+      setShowForm(false);
+      setNewProduct({ name: '', description: '', price: '', category: 'Notebooks', brand: '', stock: '', images: '', isFeatured: false });
+      fetchProducts();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create product');
+      toast.error(error.message || 'Failed to create product');
     } finally {
       setSubmitting(false);
     }
@@ -220,9 +268,10 @@ const ManageProducts = () => {
                 </select>
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Image URL
-                <input type="url" value={editForm.images} onChange={(e) => setEditForm({ ...editForm, images: e.target.value })}
-                  className="mt-1 field" placeholder="https://..." />
+                Image Upload
+                <input type="file" accept="image/*" onChange={(e) => uploadFileHandler(e, setEditForm)}
+                  className="mt-1 w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--brass)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--ink)] hover:file:bg-[var(--brass)]/80" />
+                {editForm.images && <p className="mt-1 text-xs text-green-600">Image selected/uploaded.</p>}
               </label>
               <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
                 Description
@@ -279,9 +328,10 @@ const ManageProducts = () => {
                 </select>
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Image URL
-                <input type="url" value={newProduct.images} onChange={(e) => setNewProduct({ ...newProduct, images: e.target.value })}
-                  className="mt-1 field" placeholder="https://..." />
+                Image Upload
+                <input type="file" accept="image/*" onChange={(e) => uploadFileHandler(e, setNewProduct)}
+                  className="mt-1 w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--brass)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--ink)] hover:file:bg-[var(--brass)]/80" />
+                {newProduct.images && <p className="mt-1 text-xs text-green-600">Image selected/uploaded.</p>}
               </label>
               <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
                 Description
@@ -333,15 +383,13 @@ const ManageProducts = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {products.map((product) => (
-                  <tr key={product._id} className="hover:bg-slate-50 transition">
+                  <tr key={product.id || product._id} className="hover:bg-slate-50 transition">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <LazyImage
-                          src="/roots.png"
+                        <img
+                          src={product.images && product.images.length > 0 ? product.images[0] : '/roots.png'}
                           alt={product.name}
                           className="h-10 w-10 rounded-xl object-cover border border-slate-100"
-                          width="40"
-                          height="40"
                         />
                         <div>
                           <p className="font-semibold text-[var(--ink)] max-w-[200px] truncate">{product.name}</p>
@@ -372,7 +420,7 @@ const ManageProducts = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(product._id, product.name)}
+                          onClick={() => handleDelete(product.id || product._id, product.name)}
                           className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
                         >
                           <Trash2 size={12} /> Delete

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import api from '../../services/api.js';
+import { supabase } from '../../services/supabase.js';
 import Spinner from '../../components/Spinner.jsx';
 import { toast } from 'react-hot-toast';
 
@@ -23,12 +23,15 @@ const ManageOrders = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/admin/orders');
-      if (data.success) {
-        setOrders(data.data);
-      }
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, profiles(*)')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      setOrders(data || []);
     } catch (error) {
-      console.error('Failed to fetch orders:', error);
+      console.error('Failed to fetch orders:', error.message);
     } finally {
       setLoading(false);
     }
@@ -41,13 +44,17 @@ const ManageOrders = () => {
   const handleStatusUpdate = async (orderId, newStatus) => {
     setUpdating(orderId);
     try {
-      const { data } = await api.put(`/admin/orders/${orderId}/status`, { status: newStatus });
-      if (data.success) {
-        setOrders((prev) => prev.map((o) => (o._id === orderId ? { ...o, status: newStatus } : o)));
-        toast.success(`Order status updated to "${newStatus}"`);
-      }
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
+      toast.success(`Order status updated to "${newStatus}"`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+      toast.error(error.message || 'Failed to update status');
     } finally {
       setUpdating(null);
     }
@@ -93,25 +100,25 @@ const ManageOrders = () => {
                 {orders.map((order) => {
                   const statusStyle = STATUS_STYLES[order.status] || STATUS_STYLES.pending;
                   return (
-                    <tr key={order._id} className="hover:bg-slate-50 transition">
+                    <tr key={order.id} className="hover:bg-slate-50 transition">
                       <td className="px-5 py-4 font-mono text-xs text-slate-500 max-w-[140px] truncate">
-                        <Link to={`/order/${order._id}`} className="hover:text-[var(--brass)] hover:underline">
-                          #{order._id.slice(-8)}
+                        <Link to={`/order/${order.id}`} className="hover:text-[var(--brass)] hover:underline">
+                          #{order.id.slice(-8)}
                         </Link>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-[var(--ink)]">{order.user?.name || 'N/A'}</p>
-                        <p className="text-xs text-slate-400">{order.user?.email}</p>
+                        <p className="font-semibold text-[var(--ink)]">{order.profiles?.full_name || 'N/A'}</p>
+                        <p className="text-xs text-slate-400">{order.profiles?.email}</p>
                       </td>
                       <td className="px-5 py-4 text-slate-600 text-xs">
-                        {new Date(order.createdAt).toLocaleDateString('en-PK', {
+                        {new Date(order.created_at).toLocaleDateString('en-PK', {
                           year: 'numeric', month: 'short', day: 'numeric',
                         })}
                       </td>
                       <td className="px-5 py-4 font-bold text-[var(--ink)]">
-                        Rs. {order.totalPrice?.toLocaleString()}
+                        Rs. {order.total_price?.toLocaleString()}
                       </td>
-                      <td className="px-5 py-4 text-xs text-slate-600">{order.paymentMethod}</td>
+                      <td className="px-5 py-4 text-xs text-slate-600">{order.payment_method}</td>
                       <td className="px-5 py-4">
                         <span className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${statusStyle}`}>
                           {order.status}
@@ -120,8 +127,8 @@ const ManageOrders = () => {
                       <td className="px-5 py-4">
                         <select
                           value={order.status}
-                          disabled={updating === order._id}
-                          onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
+                          disabled={updating === order.id}
+                          onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
                           className="field py-1.5 text-xs w-36"
                         >
                           {STATUS_OPTIONS.map((s) => (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthState, useAuthDispatch } from '../hooks/useAuth.js';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import { toast } from 'react-hot-toast';
 
 const ProfilePage = () => {
@@ -10,6 +10,7 @@ const ProfilePage = () => {
   // Profile fields
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   
   // Address fields
   const [street, setStreet] = useState('');
@@ -28,8 +29,9 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (user) {
-      setName(user.name || '');
+      setName(user.full_name || user.name || '');
       setPhone(user.phone || '');
+      setEmail(user.email || '');
       if (user.address) {
         setStreet(user.address.street || '');
         setCity(user.address.city || '');
@@ -45,13 +47,26 @@ const ProfilePage = () => {
     setLoading(true);
     try {
       const address = { street, city, province, postalCode, country };
-      const { data } = await api.put('/auth/me', { name, phone, address });
-      if (data.success) {
-        dispatch({ type: 'UPDATE_USER', payload: data.data });
-        toast.success('Profile updated successfully');
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ full_name: name, phone, address })
+        .eq('id', user.id)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Update Email if changed
+      if (email !== user.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email });
+        if (emailError) throw emailError;
+        toast.success('Check your new email inbox for a confirmation link to finalize the email change!');
       }
+      
+      dispatch({ type: 'UPDATE_USER', payload: { ...user, ...data } });
+      toast.success('Profile updated successfully');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update profile');
+      toast.error(error.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -65,15 +80,18 @@ const ProfilePage = () => {
     }
     setPasswordLoading(true);
     try {
-      const { data } = await api.put('/auth/change-password', { currentPassword, newPassword });
-      if (data.success) {
-        toast.success('Password changed successfully');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmNewPassword('');
-      }
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+      
+      toast.success('Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to change password');
+      toast.error(error.message || 'Failed to change password');
     } finally {
       setPasswordLoading(false);
     }
@@ -105,12 +123,12 @@ const ProfilePage = () => {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Email (Cannot be changed)
+                Email
                 <input
                   type="email"
-                  disabled
-                  value={user.email}
-                  className="mt-2 w-full rounded-3xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm outline-none cursor-not-allowed"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-2 w-full rounded-3xl border border-slate-200 bg-[#FAF8F3] px-5 py-3 text-sm outline-none focus:ring-2 focus:ring-[#D4A017]"
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">

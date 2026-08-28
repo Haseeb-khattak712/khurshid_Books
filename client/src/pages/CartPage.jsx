@@ -62,7 +62,7 @@ const CartPage = () => {
                 <div key={item.product || item._id || item.id} className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center justify-between">
                   <div className="flex items-center gap-4">
                     <LazyImage
-                      src={item.image || '/roots.png'}
+                      src={item.images && item.images.length > 0 ? (item.images[0].startsWith('http') ? item.images[0] : `http://localhost:5000${item.images[0]}`) : item.image || '/roots.png'}
                       alt={item.name}
                       className="h-20 w-20 rounded-2xl object-cover border border-slate-100 shrink-0"
                       width="80"

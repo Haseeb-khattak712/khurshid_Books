@@ -1,13 +1,13 @@
 import { createContext, useEffect, useReducer } from 'react';
-import axios from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 
 export const AuthStateContext = createContext();
 export const AuthDispatchContext = createContext();
 
 const initialState = {
   user: null,
-  token: localStorage.getItem('token') || null,
-  isLoading: false
+  token: null,
+  isLoading: true,
 };
 
 const authReducer = (state, action) => {
@@ -19,7 +19,7 @@ const authReducer = (state, action) => {
     case 'LOGOUT':
       return { user: null, token: null, isLoading: false };
     case 'UPDATE_USER':
-      return { ...state, user: action.payload };
+      return { ...state, user: action.payload, isLoading: false };
     default:
       return state;
   }
@@ -29,30 +29,46 @@ export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    // Only react to token changes. Avoid depending on `state.user` which causes
-    // the effect to re-run when user object is updated elsewhere.
-    if (state.token) {
-      localStorage.setItem('token', state.token);
-      axios.defaults.headers.common.Authorization = `Bearer ${state.token}`;
-
-      const fetchUser = async () => {
-        try {
-          const res = await axios.get('/auth/me');
-          if (res.data.success) {
-            dispatch({ type: 'UPDATE_USER', payload: res.data.data });
-          } else {
-            dispatch({ type: 'LOGOUT' });
-          }
-        } catch (error) {
-          dispatch({ type: 'LOGOUT' });
+    const fetchProfile = async (sessionUser, sessionToken) => {
+      if (!sessionUser) {
+        dispatch({ type: 'LOGOUT' });
+        return;
+      }
+      try {
+        // Wait a small moment to ensure the trigger creates the profile
+        await new Promise(res => setTimeout(res, 500));
+        
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', sessionUser.id)
+          .single();
+        
+        if (error) {
+          // If no profile found immediately after signup, we can construct a basic one
+          console.warn('Profile not found immediately:', error.message);
         }
-      };
-      fetchUser();
-    } else {
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common.Authorization;
-    }
-  }, [state.token]);
+        
+        dispatch({ 
+          type: 'UPDATE_USER', 
+          payload: { ...sessionUser, ...(profile || {}) } 
+        });
+      } catch (error) {
+        console.error('Error fetching profile:', error.message);
+        dispatch({ type: 'LOGOUT' });
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchProfile(session?.user, session?.access_token);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      fetchProfile(session?.user, session?.access_token);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <AuthStateContext.Provider value={state}>

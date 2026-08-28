@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Check } from 'lucide-react';
 import LazyImage from '../components/LazyImage.jsx';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 
 const SchoolPacksPage = () => {
   const [packs, setPacks] = useState([]);
@@ -13,16 +13,18 @@ const SchoolPacksPage = () => {
   useEffect(() => {
     const fetchPacks = async () => {
       try {
-        const params = {};
-        if (schoolFilter) params.school = schoolFilter;
-        // limit initial payload to 12 items to reduce DOM and payload
-        params.limit = 12;
-        const res = await api.get('/school-packs', { params });
-        if (res.data.success) {
-          setPacks(res.data.data || []);
+        let query = supabase.from('products').select('*').eq('category', 'School Packs').limit(12);
+        
+        if (schoolFilter) {
+          query = query.ilike('name', `%${schoolFilter}%`); // Naive filter
         }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        
+        setPacks(data || []);
       } catch (error) {
-        console.error('Error fetching packs:', error);
+        console.error('Error fetching packs:', error.message);
       } finally {
         setLoading(false);
       }
@@ -97,10 +99,10 @@ const SchoolPacksPage = () => {
             {packs.map((pack) => (
               <div key={pack._id} className="rounded-3xl border border-slate-200 bg-white overflow-hidden hover:shadow-lg transition">
                 <div className="relative h-48 bg-slate-100">
-                  <LazyImage src="/roots.png" alt={pack.name} className="h-full w-full object-cover" width="600" height="320" />
-                  {pack.discountPrice && pack.discountPrice < pack.price && (
+                  <LazyImage src={pack.images && pack.images.length > 0 ? pack.images[0] : "/roots.png"} alt={pack.name} className="h-full w-full object-cover" width="600" height="320" />
+                  {pack.discount_price && pack.discount_price < pack.price && (
                     <div className="absolute top-4 right-4 rounded-full bg-[#D4A017] px-3 py-1 text-xs font-bold text-[#1A2744]">
-                      SAVE Rs. {(pack.price - pack.discountPrice).toLocaleString()}
+                      SAVE Rs. {(pack.price - pack.discount_price).toLocaleString()}
                     </div>
                   )}
                 </div>
@@ -134,9 +136,9 @@ const SchoolPacksPage = () => {
                   <div className="mt-6 flex items-center justify-between">
                     <div>
                       <span className="text-2xl font-bold text-[#1A2744]">
-                        Rs. {(pack.discountPrice || pack.price).toLocaleString()}
+                        Rs. {(pack.discount_price || pack.price).toLocaleString()}
                       </span>
-                      {pack.discountPrice && (
+                      {pack.discount_price && (
                         <span className="ml-2 text-sm text-slate-400 line-through">
                           Rs. {pack.price.toLocaleString()}
                         </span>

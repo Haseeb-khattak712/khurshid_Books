@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import { useAuthDispatch, useAuthState } from '../hooks/useAuth.js';
 
 const LoginPage = () => {
@@ -25,15 +25,17 @@ const LoginPage = () => {
     setLoading(true);
     try {
       dispatch({ type: 'LOGIN_REQUEST' });
-      const { data } = await api.post('/auth/login', { email, password });
-      if (data.success) {
-        dispatch({ type: 'LOGIN_SUCCESS', payload: { user: data.data, token: data.data.token } });
-        toast.success(`Welcome, ${data.data.name}`);
-        navigate(from, { replace: true });
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      
+      toast.success(`Welcome back!`);
+      navigate(from, { replace: true });
     } catch (error) {
       dispatch({ type: 'LOGOUT' });
-      toast.error(error.response?.data?.message || 'Invalid email or password');
+      toast.error(error.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

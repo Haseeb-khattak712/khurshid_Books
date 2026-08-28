@@ -2,8 +2,6 @@ import { useEffect } from 'react';
 
 const useScrollReveal = (deps = []) => {
   useEffect(() => {
-    window.scrollTo(0, 0);
-
     const elements = Array.from(document.querySelectorAll('[data-reveal]'));
     if (!elements.length) return undefined;
 

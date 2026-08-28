@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ArrowLeft, ShieldAlert, User } from 'lucide-react';
-import api from '../../services/api.js';
+import { supabase } from '../../services/supabase.js';
 import Spinner from '../../components/Spinner.jsx';
 import { toast } from 'react-hot-toast';
 import { useAuthState } from '../../hooks/useAuth.js';
@@ -14,12 +14,15 @@ const ManageUsers = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/admin/users');
-      if (data.success) {
-        setUsers(data.data);
-      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      setUsers(data || []);
     } catch (error) {
-      console.error('Failed to fetch users:', error);
+      console.error('Failed to fetch users:', error.message);
     } finally {
       setLoading(false);
     }
@@ -36,11 +39,12 @@ const ManageUsers = () => {
     }
     if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
     try {
-      await api.delete(`/admin/users/${id}`);
+      const { error } = await supabase.from('profiles').delete().eq('id', id);
+      if (error) throw error;
       toast.success(`User "${name}" deleted`);
-      setUsers((prev) => prev.filter((u) => u._id !== id));
+      setUsers((prev) => prev.filter((u) => u.id !== id));
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to delete user');
+      toast.error(error.message || 'Failed to delete user');
     }
   };
 
@@ -80,9 +84,9 @@ const ManageUsers = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {users.map((u) => {
-                  const isSelf = u._id === currentUser?._id;
+                  const isSelf = u.id === currentUser?.id || u.id === currentUser?._id;
                   return (
-                    <tr key={u._id} className={`hover:bg-slate-50 transition ${isSelf ? 'bg-amber-50/40' : ''}`}>
+                    <tr key={u.id} className={`hover:bg-slate-50 transition ${isSelf ? 'bg-amber-50/40' : ''}`}>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${u.role === 'admin' ? 'bg-[var(--brass)]/15 text-[var(--brass)]' : 'bg-slate-100 text-slate-500'}`}>
@@ -90,7 +94,7 @@ const ManageUsers = () => {
                           </div>
                           <div>
                             <p className="font-semibold text-[var(--ink)]">
-                              {u.name}
+                              {u.full_name || u.name}
                               {isSelf && <span className="ml-2 text-xs text-[var(--brass)] font-normal">(you)</span>}
                             </p>
                           </div>
@@ -107,7 +111,7 @@ const ManageUsers = () => {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-xs text-slate-500">
-                        {new Date(u.createdAt).toLocaleDateString('en-PK', {
+                        {new Date(u.created_at).toLocaleDateString('en-PK', {
                           year: 'numeric', month: 'short', day: 'numeric',
                         })}
                       </td>
@@ -115,7 +119,7 @@ const ManageUsers = () => {
                         <button
                           type="button"
                           disabled={isSelf}
-                          onClick={() => handleDelete(u._id, u.name)}
+                          onClick={() => handleDelete(u.id, u.full_name || u.name)}
                           className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           <Trash2 size={12} /> Delete

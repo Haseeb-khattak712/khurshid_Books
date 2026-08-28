@@ -4,7 +4,7 @@ import { Star, ShoppingCart, Heart, ArrowLeft, Check, Package, Truck, ShieldChec
 import { useAuthState } from '../hooks/useAuth.js';
 import { useCartDispatch } from '../context/CartContext.jsx';
 import { useWishlistDispatch, useWishlistState } from '../context/WishlistContext.jsx';
-import api from '../services/api.js';
+import { supabase } from '../services/supabase.js';
 import { toast } from 'react-hot-toast';
 import LazyImage from '../components/LazyImage.jsx';
 
@@ -26,15 +26,22 @@ const ProductDetailPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const { data } = await api.get(`/products/${slug}`);
-        if (data.success && data.data) {
-          setProduct(data.data);
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('slug', slug)
+          .single();
+
+        if (error) throw error;
+        
+        if (data) {
+          setProduct(data);
         } else {
           setError('Product not found');
         }
       } catch (err) {
         console.error('Error fetching product:', err);
-        setError(err.response?.data?.message || 'Failed to load product');
+        setError(err.message || 'Failed to load product');
       } finally {
         setLoading(false);
       }
@@ -51,7 +58,7 @@ const ProductDetailPage = () => {
   const handleWishlistToggle = () => {
     if (!product) return;
     if (isWishlisted) {
-      removeFromWishlist(product._id);
+      removeFromWishlist(product.id || product._id);
       toast.success('Removed from wishlist');
     } else {
       addToWishlist(product);
@@ -102,7 +109,7 @@ const ProductDetailPage = () => {
           {/* Image Section */}
           <div className="relative rounded-3xl bg-white p-4 shadow-sm">
             <LazyImage
-              src="/roots.png"
+              src={product.images && product.images.length > 0 ? (product.images[0].startsWith('http') ? product.images[0] : `http://localhost:5000${product.images[0]}`) : '/roots.png'}
               alt={product.name}
               className="h-full w-full rounded-2xl object-cover aspect-square"
               width="720"
@@ -113,7 +120,7 @@ const ProductDetailPage = () => {
                 SAVE Rs. {savings}
               </span>
             )}
-            {product.isFeatured && !isPack && (
+            {(product.is_featured || product.isFeatured) && !isPack && (
               <span className="absolute right-6 top-6 rounded-full bg-[#D4A017] px-3 py-1 text-xs font-bold text-[#1A2744]">
                 FEATURED
               </span>
