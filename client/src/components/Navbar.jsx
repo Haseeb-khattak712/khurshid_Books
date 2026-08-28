@@ -67,6 +67,7 @@ const Navbar = () => {
               >
                 {link.label}
               </NavLink>
+            ))}
           </div>
         </nav>
 
