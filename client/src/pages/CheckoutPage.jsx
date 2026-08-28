@@ -248,7 +248,7 @@ const CheckoutPage = () => {
                   Payment Method
                 </h2>
                 <div className="space-y-3">
-                  {['Cash on Delivery', 'Credit/Debit Card (Stripe)'].map((method) => {
+                  {['Cash on Delivery'].map((method) => {
                     const disabled = false;
                     return (
                       <label
