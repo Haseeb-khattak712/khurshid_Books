@@ -31,8 +31,16 @@ const LoginPage = () => {
       });
       if (error) throw error;
       
+      let redirectPath = from;
+      if (data.user) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).single();
+        if (profile?.role === 'admin') {
+          redirectPath = '/admin';
+        }
+      }
+      
       toast.success(`Welcome back!`);
-      navigate(from, { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (error) {
       dispatch({ type: 'LOGOUT' });
       toast.error(error.message || 'Invalid email or password');

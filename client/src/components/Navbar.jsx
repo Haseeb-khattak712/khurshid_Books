@@ -67,16 +67,6 @@ const Navbar = () => {
               >
                 {link.label}
               </NavLink>
-            ))}
-            {user?.role === 'admin' && (
-              <NavLink
-                to="/admin"
-                className={({ isActive }) => `nav-link block py-2 md:py-0 text-[var(--brass)] flex items-center gap-1 ${isActive ? 'active' : ''}`}
-                onClick={closeMobileMenu}
-              >
-                <ShieldAlert size={14} /> Admin
-              </NavLink>
-            )}
           </div>
         </nav>
 
@@ -107,9 +97,11 @@ const Navbar = () => {
 
           {user ? (
             <div className="flex items-center gap-2 border-l border-[var(--line)] pl-3">
-              <Link to="/profile" className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--brass)] transition">
-                <User size={15} />
-                <span className="hidden sm:inline">{(user.full_name || user.name || 'User').split(' ')[0]}</span>
+              <Link to={user.role === 'admin' ? '/admin' : '/profile'} className="flex items-center gap-1.5 text-xs font-semibold text-[var(--ink)] hover:text-[var(--brass)] transition" title={user.role === 'admin' ? 'Admin Dashboard' : 'Profile'}>
+                {user.role === 'admin' ? <ShieldAlert size={15} /> : <User size={15} />}
+                <span className="hidden sm:inline">
+                  {user.role === 'admin' ? 'Dashboard' : (user.full_name || user.name || 'User').split(' ')[0]}
+                </span>
               </Link>
               <button
                 type="button"
