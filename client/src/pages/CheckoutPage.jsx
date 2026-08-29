@@ -241,9 +241,13 @@ const CheckoutPage = () => {
                     <input
                       type="tel"
                       required
+                      pattern="^(03)[0-9]{9}$"
+                      minLength="11"
+                      maxLength="11"
+                      title="Please enter a valid 11-digit Pakistani mobile number starting with 03 (e.g. 03001234567)"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. 0300-1234567"
+                      placeholder="e.g. 03001234567"
                       className="mt-2 w-full rounded-2xl border border-slate-200 bg-[#FAF8F3] px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#D4A017]"
                     />
                   </label>
