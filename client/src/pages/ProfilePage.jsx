@@ -46,10 +46,10 @@ const ProfilePage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const address = { street, city, province, postalCode, country };
+      const addressObj = { street, city, province, postalCode, country, phone };
       const { data, error } = await supabase
         .from('profiles')
-        .update({ full_name: name, phone, address })
+        .update({ name: name, address: addressObj })
         .eq('id', user.id)
         .select()
         .single();
