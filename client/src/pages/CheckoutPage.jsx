@@ -23,6 +23,7 @@ const CheckoutPage = () => {
   const [province, setProvince] = useState(user?.address?.province || '');
   const [postalCode, setPostalCode] = useState(user?.address?.postalCode || '');
   const [country, setCountry] = useState(user?.address?.country || 'Pakistan');
+  const [phone, setPhone] = useState(user?.address?.phone || '');
 
   const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery');
 
@@ -33,7 +34,7 @@ const CheckoutPage = () => {
 
   const handleShippingNext = (e) => {
     e.preventDefault();
-    if (!street || !city || !province || !postalCode || !country) {
+    if (!street || !city || !province || !postalCode || !country || !phone) {
       toast.error('Please fill in all shipping fields');
       return;
     }
@@ -59,7 +60,7 @@ const CheckoutPage = () => {
 
     setLoading(true);
     try {
-      const shippingAddress = { street, city, province, postalCode, country };
+      const shippingAddress = { street, city, province, postalCode, country, phone };
 
       const orderItemsData = items.map((item) => ({
         product_id: item.product || item._id || item.id,
@@ -232,6 +233,17 @@ const CheckoutPage = () => {
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
                       placeholder="Pakistan"
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-[#FAF8F3] px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#D4A017]"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700 sm:col-span-2">
+                    Phone Number
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. 0300-1234567"
                       className="mt-2 w-full rounded-2xl border border-slate-200 bg-[#FAF8F3] px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#D4A017]"
                     />
                   </label>
