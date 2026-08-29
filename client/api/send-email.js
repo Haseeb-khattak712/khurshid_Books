@@ -44,7 +44,7 @@ export default async function handler(req, res) {
       `;
 
       await resend.emails.send({
-        from: 'Khurshid Books <onboarding@resend.dev>', // Update this with your verified domain email later
+        from: 'Khurshid Books <orders@khurshidbooks.com>',
         to: order.profiles.email,
         subject: `Order Confirmation #${order_id.slice(-8)}`,
         html: emailHtml,
