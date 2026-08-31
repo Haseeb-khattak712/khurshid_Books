@@ -47,8 +47,14 @@ const RegisterPage = () => {
       });
       if (error) throw error;
       
-      toast.success(`Registered successfully! Welcome, ${name}`);
-      navigate('/');
+      // If email confirmation is ON in Supabase, session will be null until they verify
+      if (data.session === null) {
+        toast.success(`Registration successful! Please check your email (${email}) to confirm your account before logging in.`, { duration: 6000 });
+        navigate('/login');
+      } else {
+        toast.success(`Registered successfully! Welcome, ${name}`);
+        navigate('/');
+      }
     } catch (error) {
       dispatch({ type: 'LOGOUT' });
       toast.error(error.message || 'Registration failed');
