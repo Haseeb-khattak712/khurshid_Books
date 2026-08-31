@@ -19,6 +19,12 @@ const ManageOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
+  
+  // Tracking Modal State
+  const [trackingModal, setTrackingModal] = useState({ isOpen: false, orderId: null, trackingNumber: '', courierName: '' });
+  
+  // Details Modal State
+  const [detailsModal, setDetailsModal] = useState(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -53,8 +59,68 @@ const ManageOrders = () => {
 
       setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o)));
       toast.success(`Order status updated to "${newStatus}"`);
+      
+      // If status changed to shipped, open tracking modal automatically
+      if (newStatus === 'shipped') {
+        const order = orders.find(o => o.id === orderId);
+        setTrackingModal({ 
+          isOpen: true, 
+          orderId, 
+          trackingNumber: order?.tracking_number || '', 
+          courierName: order?.courier_name || '' 
+        });
+      }
     } catch (error) {
       toast.error(error.message || 'Failed to update status');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleVerify = async (orderId, currentStatus) => {
+    setUpdating(orderId);
+    try {
+      const newStatus = !currentStatus;
+      const { error } = await supabase
+        .from('orders')
+        .update({ is_verified: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, is_verified: newStatus } : o)));
+      toast.success(`Order marked as ${newStatus ? 'Verified' : 'Unverified'}`);
+    } catch (error) {
+      toast.error(error.message || 'Failed to verify order');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleSaveTracking = async () => {
+    if (!trackingModal.orderId) return;
+    setUpdating(trackingModal.orderId);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          tracking_number: trackingModal.trackingNumber,
+          courier_name: trackingModal.courierName
+        })
+        .eq('id', trackingModal.orderId);
+
+      if (error) throw error;
+
+      setOrders((prev) => prev.map((o) => (o.id === trackingModal.orderId ? { 
+        ...o, 
+        tracking_number: trackingModal.trackingNumber,
+        courier_name: trackingModal.courierName
+      } : o)));
+      
+      toast.success('Tracking information saved');
+      setTrackingModal({ isOpen: false, orderId: null, trackingNumber: '', courierName: '' });
+    } catch (error) {
+      toast.error(error.message || 'Failed to save tracking info');
     } finally {
       setUpdating(null);
     }
@@ -93,7 +159,7 @@ const ManageOrders = () => {
                   <th className="px-5 py-4">Total</th>
                   <th className="px-5 py-4">Payment</th>
                   <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Update Status</th>
+                  <th className="px-5 py-4">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -102,9 +168,9 @@ const ManageOrders = () => {
                   return (
                     <tr key={order.id} className="hover:bg-slate-50 transition">
                       <td className="px-5 py-4 font-mono text-xs text-slate-500 max-w-[140px] truncate">
-                        <Link to={`/order/${order.id}`} className="hover:text-[var(--brass)] hover:underline">
+                        <button onClick={() => setDetailsModal(order)} className="hover:text-[var(--brass)] hover:underline font-bold text-[#1A2744]">
                           #{order.id.slice(-8)}
-                        </Link>
+                        </button>
                       </td>
                       <td className="px-5 py-4">
                         <p className="font-semibold text-[var(--ink)]">{order.profiles?.full_name || 'N/A'}</p>
@@ -125,18 +191,56 @@ const ManageOrders = () => {
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <select
-                          value={order.status}
-                          disabled={updating === order.id}
-                          onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
-                          className="field py-1.5 text-xs w-36"
-                        >
-                          {STATUS_OPTIONS.map((s) => (
-                            <option key={s} value={s} className="capitalize">
-                              {s.charAt(0).toUpperCase() + s.slice(1)}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex flex-col gap-2">
+                          <select
+                            value={order.status}
+                            disabled={updating === order.id}
+                            onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                            className="field py-1.5 text-xs w-full max-w-[150px]"
+                          >
+                            {STATUS_OPTIONS.map((s) => (
+                              <option key={s} value={s} className="capitalize">
+                                {s.charAt(0).toUpperCase() + s.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                          
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleVerify(order.id, order.is_verified)}
+                              disabled={updating === order.id}
+                              className={`px-2 py-1 text-xs rounded border font-semibold ${
+                                order.is_verified 
+                                  ? 'bg-green-50 text-green-700 border-green-200' 
+                                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {order.is_verified ? 'Verified' : 'Verify'}
+                            </button>
+                            
+                            <Link
+                              to={`/admin/print/${order.id}`}
+                              target="_blank"
+                              className="px-2 py-1 text-xs rounded border border-[#D4A017] text-[#1A2744] hover:bg-[#D4A017]/10 font-semibold text-center"
+                            >
+                              Print
+                            </Link>
+                          </div>
+                          
+                          {order.status === 'shipped' && (
+                            <button
+                              onClick={() => setTrackingModal({
+                                isOpen: true,
+                                orderId: order.id,
+                                trackingNumber: order.tracking_number || '',
+                                courierName: order.courier_name || ''
+                              })}
+                              className="text-xs text-[var(--brass)] hover:underline text-left"
+                            >
+                              {order.tracking_number ? 'Edit Tracking' : '+ Add Tracking'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -146,6 +250,143 @@ const ManageOrders = () => {
           </div>
         )}
       </div>
+
+      {trackingModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-serif text-lg font-semibold text-[var(--ink)] mb-4">Tracking Information</h3>
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-slate-700">
+                Courier Name
+                <input
+                  type="text"
+                  value={trackingModal.courierName}
+                  onChange={(e) => setTrackingModal(prev => ({ ...prev, courierName: e.target.value }))}
+                  placeholder="e.g. TCS, Leopards"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-[#FAF8F3] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#D4A017]"
+                />
+              </label>
+              <label className="block text-sm font-medium text-slate-700">
+                Tracking Number
+                <input
+                  type="text"
+                  value={trackingModal.trackingNumber}
+                  onChange={(e) => setTrackingModal(prev => ({ ...prev, trackingNumber: e.target.value }))}
+                  placeholder="e.g. 1234567890"
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-[#FAF8F3] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#D4A017]"
+                />
+              </label>
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTrackingModal({ isOpen: false, orderId: null, trackingNumber: '', courierName: '' })}
+                  className="flex-1 btn-secondary py-2 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveTracking}
+                  className="flex-1 btn-primary py-2 text-sm"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {detailsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 py-8">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-full flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50">
+              <div>
+                <h3 className="font-serif text-xl font-semibold text-[var(--ink)]">Order Details</h3>
+                <p className="text-xs text-slate-500 font-mono mt-1">ID: #{detailsModal.id}</p>
+              </div>
+              <button 
+                onClick={() => setDetailsModal(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 transition"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Customer</h4>
+                  <p className="font-semibold text-sm">{detailsModal.profiles?.full_name || 'Guest'}</p>
+                  <p className="text-sm text-slate-600">{detailsModal.profiles?.email}</p>
+                  <p className="text-sm text-slate-600 mt-2">Phone: {detailsModal.shipping_address?.phone}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Shipping Address</h4>
+                  <p className="text-sm text-slate-700">
+                    {detailsModal.shipping_address?.street}, {detailsModal.shipping_address?.city}
+                  </p>
+                  <p className="text-sm text-slate-700">
+                    {detailsModal.shipping_address?.province}, {detailsModal.shipping_address?.postalCode}
+                  </p>
+                </div>
+              </div>
+
+              <h4 className="font-serif text-lg font-semibold text-[var(--ink)] mb-3">Items Ordered</h4>
+              <div className="border border-slate-200 rounded-2xl overflow-hidden mb-6">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold text-slate-600">Product Name</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-center">Qty</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-right">Price</th>
+                      <th className="px-4 py-3 font-semibold text-slate-600 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {detailsModal.order_items?.map((item, i) => (
+                      <tr key={i}>
+                        <td className="px-4 py-3 text-[var(--ink)]">{item.name}</td>
+                        <td className="px-4 py-3 text-center">{item.quantity}</td>
+                        <td className="px-4 py-3 text-right">Rs. {item.price.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right font-bold">Rs. {(item.price * item.quantity).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="flex justify-end">
+                <div className="w-64 space-y-2 text-sm text-slate-600">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>Rs. {(detailsModal.total_price - 150).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping:</span>
+                    <span>Rs. 150</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-base text-[var(--ink)] border-t border-slate-200 pt-2 mt-2">
+                    <span>Total:</span>
+                    <span>Rs. {detailsModal.total_price?.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <Link 
+                to={`/admin/print/${detailsModal.id}`} 
+                target="_blank"
+                className="btn-primary py-2 px-6 text-sm"
+              >
+                Print Invoice
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

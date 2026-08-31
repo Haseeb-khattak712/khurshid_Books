@@ -79,8 +79,8 @@ const OrderConfirmationPage = () => {
     );
   }
 
-  const computedStatus = order.is_delivered ? 'delivered' : (order.is_paid ? 'processing' : 'pending');
-  const statusInfo = STATUS_CONFIG[computedStatus] || STATUS_CONFIG.pending;
+  const actualStatus = order.status || 'pending';
+  const statusInfo = STATUS_CONFIG[actualStatus] || STATUS_CONFIG.pending;
   const StatusIcon = statusInfo.icon;
 
   return (
@@ -115,6 +115,14 @@ const OrderConfirmationPage = () => {
                 <StatusIcon size={12} /> {statusInfo.label}
               </span>
             </div>
+            {order.tracking_number && (
+              <div>
+                <p className="text-[var(--text-muted)] mb-1">Tracking Info</p>
+                <p className="font-semibold text-[var(--ink)] text-xs">
+                  {order.courier_name || 'Courier'} - {order.tracking_number}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Order Items */}

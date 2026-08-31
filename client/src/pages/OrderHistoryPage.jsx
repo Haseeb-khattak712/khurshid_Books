@@ -86,8 +86,8 @@ const OrderHistoryPage = () => {
 
             <div className="divide-y divide-slate-100">
               {orders.map((order) => {
-                const computedStatus = order.is_delivered ? 'delivered' : (order.is_paid ? 'processing' : 'pending');
-                const statusStyle = STATUS_STYLES[computedStatus] || STATUS_STYLES.pending;
+                const actualStatus = order.status || 'pending';
+                const statusStyle = STATUS_STYLES[actualStatus] || STATUS_STYLES.pending;
                 return (
                   <div
                     key={order.id}
@@ -118,7 +118,7 @@ const OrderHistoryPage = () => {
                     {/* Status badge */}
                     <div className="sm:text-center">
                       <span className={`inline-block rounded-full border px-3 py-0.5 text-xs font-semibold capitalize ${statusStyle}`}>
-                        {computedStatus}
+                        {actualStatus}
                       </span>
                     </div>
 
