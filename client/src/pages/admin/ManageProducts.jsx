@@ -15,12 +15,6 @@ const ManageProducts = () => {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Google Books Auto-fill state
-  const [googleQuery, setGoogleQuery] = useState('');
-  const [googleResults, setGoogleResults] = useState([]);
-  const [isSearchingGoogle, setIsSearchingGoogle] = useState(false);
-  const [showGoogleDropdown, setShowGoogleDropdown] = useState(false);
-
   // Edit state
   const [editingProduct, setEditingProduct] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -119,43 +113,6 @@ const ManageProducts = () => {
       console.error(error);
       toast.error('Image upload failed', { id: toastId });
     }
-  };
-
-  // ─── GOOGLE BOOKS AUTO-FILL ───────────────────────────────────────────────
-  
-  const searchGoogleBooks = async (e) => {
-    e.preventDefault();
-    if (!googleQuery.trim()) return;
-    setIsSearchingGoogle(true);
-    try {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(googleQuery)}&maxResults=5`);
-      const data = await res.json();
-      setGoogleResults(data.items || []);
-      setShowGoogleDropdown(true);
-    } catch (error) {
-      toast.error('Failed to fetch from Google Books');
-    } finally {
-      setIsSearchingGoogle(false);
-    }
-  };
-
-  const handleAutoFill = (book) => {
-    const info = book.volumeInfo;
-    const title = info.title || '';
-    const author = info.authors ? info.authors.join(', ') : '';
-    const desc = info.description || '';
-    const fullDesc = author ? `Author: ${author}\n\n${desc}` : desc;
-    const image = info.imageLinks?.thumbnail?.replace('http:', 'https:') || '';
-    
-    if (editingProduct) {
-      setEditForm((prev) => ({ ...prev, name: title, description: fullDesc, images: image, category: 'Books' }));
-    } else {
-      setNewProduct((prev) => ({ ...prev, name: title, description: fullDesc, images: image, category: 'Books' }));
-    }
-    
-    setShowGoogleDropdown(false);
-    setGoogleQuery('');
-    toast.success('Fields auto-filled successfully!');
   };
 
   // ─── EDIT LOGIC ───────────────────────────────────────────────────────────
@@ -282,59 +239,6 @@ const ManageProducts = () => {
                 <X size={16} />
               </button>
             </div>
-
-            {/* Google Books Search Bar */}
-            <div className="rounded-2xl bg-[#FAF8F3] p-4 mb-4 border border-slate-200 relative">
-              <label className="block text-xs font-semibold text-[var(--ink)] mb-2 uppercase tracking-wide">
-                Auto-fill from Google Books API
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter book name or ISBN..."
-                  value={googleQuery}
-                  onChange={(e) => setGoogleQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchGoogleBooks(e)}
-                  className="flex-1 field py-2 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={searchGoogleBooks}
-                  disabled={isSearchingGoogle}
-                  className="btn-primary py-2 px-4 text-sm whitespace-nowrap"
-                >
-                  {isSearchingGoogle ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-              
-              {showGoogleDropdown && googleResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 z-10 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    {googleResults.map((book) => (
-                      <div
-                        key={book.id}
-                        onClick={() => handleAutoFill(book)}
-                        className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
-                      >
-                        <img 
-                          src={book.volumeInfo.imageLinks?.smallThumbnail?.replace('http:', 'https:') || '/roots.png'} 
-                          className="h-12 w-8 object-cover rounded border border-slate-200 shrink-0"
-                          alt=""
-                        />
-                        <div className="overflow-hidden">
-                          <p className="font-semibold text-sm text-[var(--ink)] truncate">{book.volumeInfo.title}</p>
-                          <p className="text-xs text-slate-500 truncate">{book.volumeInfo.authors?.join(', ')}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" onClick={() => setShowGoogleDropdown(false)} className="w-full p-2 bg-slate-100 text-xs font-semibold text-slate-500 hover:bg-slate-200">
-                    Close
-                  </button>
-                </div>
-              )}
-            </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-slate-700">
                 Name *
@@ -395,59 +299,6 @@ const ManageProducts = () => {
         {showForm && !editingProduct && (
           <form onSubmit={handleCreateProduct} className="mb-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
             <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">New Product</h2>
-            
-            {/* Google Books Search Bar */}
-            <div className="rounded-2xl bg-[#FAF8F3] p-4 mb-4 border border-slate-200 relative">
-              <label className="block text-xs font-semibold text-[var(--ink)] mb-2 uppercase tracking-wide">
-                Auto-fill from Google Books API
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter book name or ISBN..."
-                  value={googleQuery}
-                  onChange={(e) => setGoogleQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && searchGoogleBooks(e)}
-                  className="flex-1 field py-2 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={searchGoogleBooks}
-                  disabled={isSearchingGoogle}
-                  className="btn-primary py-2 px-4 text-sm whitespace-nowrap"
-                >
-                  {isSearchingGoogle ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-              
-              {showGoogleDropdown && googleResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 z-10 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-                  <div className="max-h-64 overflow-y-auto">
-                    {googleResults.map((book) => (
-                      <div
-                        key={book.id}
-                        onClick={() => handleAutoFill(book)}
-                        className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0"
-                      >
-                        <img 
-                          src={book.volumeInfo.imageLinks?.smallThumbnail?.replace('http:', 'https:') || '/roots.png'} 
-                          className="h-12 w-8 object-cover rounded border border-slate-200 shrink-0"
-                          alt=""
-                        />
-                        <div className="overflow-hidden">
-                          <p className="font-semibold text-sm text-[var(--ink)] truncate">{book.volumeInfo.title}</p>
-                          <p className="text-xs text-slate-500 truncate">{book.volumeInfo.authors?.join(', ')}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <button type="button" onClick={() => setShowGoogleDropdown(false)} className="w-full p-2 bg-slate-100 text-xs font-semibold text-slate-500 hover:bg-slate-200">
-                    Close
-                  </button>
-                </div>
-              )}
-            </div>
-
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-slate-700">
                 Name *
