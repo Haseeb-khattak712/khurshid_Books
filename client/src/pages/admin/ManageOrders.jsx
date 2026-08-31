@@ -361,11 +361,25 @@ const ManageOrders = () => {
                 <div className="w-64 space-y-2 text-sm text-slate-600">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>Rs. {(detailsModal.total_price - 150).toLocaleString()}</span>
+                    <span>Rs. {detailsModal.order_items?.reduce((acc, item) => acc + item.price * item.quantity, 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping:</span>
-                    <span>Rs. 150</span>
+                    <span>
+                      {(() => {
+                        const sub = detailsModal.order_items?.reduce((acc, item) => acc + item.price * item.quantity, 0);
+                        return sub >= 1500 ? <span className="text-green-600 font-semibold">Free</span> : 'Rs. 150';
+                      })()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax (GST 17%):</span>
+                    <span>
+                      Rs. {(() => {
+                        const sub = detailsModal.order_items?.reduce((acc, item) => acc + item.price * item.quantity, 0);
+                        return Number((sub * 0.17).toFixed(2)).toLocaleString();
+                      })()}
+                    </span>
                   </div>
                   <div className="flex justify-between font-bold text-base text-[var(--ink)] border-t border-slate-200 pt-2 mt-2">
                     <span>Total:</span>

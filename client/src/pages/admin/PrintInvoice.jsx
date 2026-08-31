@@ -107,11 +107,25 @@ const PrintInvoice = () => {
           <div className="w-64 space-y-3">
             <div className="flex justify-between text-lg">
               <span>Subtotal:</span>
-              <span>Rs. {(order.total_price - 150).toLocaleString()}</span>
+              <span>Rs. {order.order_items?.reduce((acc, item) => acc + item.price * item.quantity, 0).toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-lg">
               <span>Shipping:</span>
-              <span>Rs. 150</span>
+              <span>
+                {(() => {
+                  const sub = order.order_items?.reduce((acc, item) => acc + item.price * item.quantity, 0);
+                  return sub >= 1500 ? 'Free' : 'Rs. 150';
+                })()}
+              </span>
+            </div>
+            <div className="flex justify-between text-lg">
+              <span>Tax (GST 17%):</span>
+              <span>
+                Rs. {(() => {
+                  const sub = order.order_items?.reduce((acc, item) => acc + item.price * item.quantity, 0);
+                  return Number((sub * 0.17).toFixed(2)).toLocaleString();
+                })()}
+              </span>
             </div>
             <div className="flex justify-between text-2xl font-bold border-t-2 border-black pt-3">
               <span>Total:</span>
