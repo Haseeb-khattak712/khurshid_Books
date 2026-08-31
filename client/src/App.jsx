@@ -8,6 +8,7 @@ import { PageTransition } from './components/PageTransition.jsx';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import Spinner from './components/Spinner.jsx';
+import WhatsAppButton from './components/WhatsAppButton.jsx';
 import useScrollReveal from './hooks/useScrollReveal.jsx';
 import AdminRoute from './components/AdminRoutes.jsx';
 import './App.css';
@@ -74,6 +75,7 @@ function AppRoutes() {
         </Routes>
       </Suspense>
       <Footer />
+      <WhatsAppButton />
       <Toaster position="top-right" />
     </div>
   );
