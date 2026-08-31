@@ -21,6 +21,14 @@ const RegisterPage = () => {
       toast.error('All fields are required');
       return;
     }
+    
+    // Basic check to block common dummy/fake emails
+    const dummyPatterns = /test@|dummy@|fake@|admin@|example\.com|test\.com/i;
+    if (dummyPatterns.test(email)) {
+      toast.error('Please use a real, valid email address to register.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
