@@ -4,9 +4,9 @@ const WhatsAppButton = () => {
   // Replace this with the client's actual WhatsApp business number.
   // Format: Country code (e.g., 92 for Pakistan) followed by the number without leading zero.
   // Example: 923001234567
-  const phoneNumber = '923000000000'; 
+  const phoneNumber = '923469325825';
   const message = 'Hello Khursheed Book Agency, I need some help!';
-  
+
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
   return (
@@ -18,7 +18,7 @@ const WhatsAppButton = () => {
       aria-label="Chat on WhatsApp"
     >
       <MessageCircle size={32} />
-      
+
       {/* Optional Ping Animation */}
       <span className="absolute -top-1 -right-1 flex h-4 w-4">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
