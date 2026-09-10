@@ -1,18 +1,6 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
-
-const CATEGORIES = [
-  'Books',
-  'Notebooks',
-  'Pens',
-  'Art Supplies',
-  'Office Supplies',
-  'Bags',
-  'Calculators',
-  'Geometry',
-  'Paper Products',
-  'Gift Items'
-];
+import { fetchCategories, DEFAULT_CATEGORIES } from '../services/categoryService.js';
 
 const ShopFilters = ({
   categoryParam,
@@ -22,6 +10,26 @@ const ShopFilters = ({
   rating,
   setRating
 }) => {
+  const [categories, setCategories] = useState(
+    DEFAULT_CATEGORIES.map(c => c.name)
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    const loadCategoryList = async () => {
+      try {
+        const data = await fetchCategories(false);
+        if (mounted && data && data.length > 0) {
+          setCategories(data.map(c => c.name));
+        }
+      } catch (err) {
+        console.error('Error loading filter categories:', err);
+      }
+    };
+    loadCategoryList();
+    return () => { mounted = false; };
+  }, []);
+
   return (
     <aside className="surface-raised h-fit p-5 lg:sticky lg:top-24">
       <div className="flex items-center gap-2 border-b border-[var(--line)] pb-3">
@@ -33,15 +41,15 @@ const ShopFilters = ({
         <div>
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Category</h3>
           <div className="max-h-60 overflow-y-auto pr-1 space-y-2 text-sm text-[var(--text)]">
-            {CATEGORIES.map((cat) => (
-              <label key={cat} className="flex cursor-pointer items-center gap-2.5">
+            {categories.map((cat) => (
+              <label key={cat} className="flex cursor-pointer items-center gap-2.5 hover:text-[var(--ink)] transition">
                 <input
                   type="checkbox"
                   className="accent-[var(--brass)]"
-                  checked={categoryParam === cat}
+                  checked={categoryParam?.toLowerCase() === cat.toLowerCase()}
                   onChange={() => handleCategoryChange(cat)}
                 />
-                {cat}
+                <span className="truncate">{cat}</span>
               </label>
             ))}
           </div>

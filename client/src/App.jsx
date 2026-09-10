@@ -30,6 +30,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const ManageProducts = lazy(() => import('./pages/admin/ManageProducts.jsx'));
 const ManageOrders = lazy(() => import('./pages/admin/ManageOrders.jsx'));
 const ManageUsers = lazy(() => import('./pages/admin/ManageUsers.jsx'));
+const ManageCategories = lazy(() => import('./pages/admin/ManageCategories.jsx'));
 const PrintInvoice = lazy(() => import('./pages/admin/PrintInvoice.jsx'));
 const SchoolPacksPage = lazy(() => import('./pages/SchoolPacksPage.jsx'));
 
@@ -69,6 +70,7 @@ function AppRoutes() {
           <Route path="/contact" element={<PageTransition><ContactPage /></PageTransition>} />
           <Route path="/admin" element={<AdminRoute><PageTransition><AdminDashboard /></PageTransition></AdminRoute>} />
           <Route path="/admin/products" element={<AdminRoute><PageTransition><ManageProducts /></PageTransition></AdminRoute>} />
+          <Route path="/admin/categories" element={<AdminRoute><PageTransition><ManageCategories /></PageTransition></AdminRoute>} />
           <Route path="/admin/orders" element={<AdminRoute><PageTransition><ManageOrders /></PageTransition></AdminRoute>} />
           <Route path="/admin/users" element={<AdminRoute><PageTransition><ManageUsers /></PageTransition></AdminRoute>} />
           <Route path="/admin/print/:id" element={<AdminRoute><PageTransition><PrintInvoice /></PageTransition></AdminRoute>} />

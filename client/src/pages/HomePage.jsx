@@ -9,6 +9,7 @@ import {
 import ProductCard from '../components/ProductCard.jsx';
 import LazyImage from '../components/LazyImage.jsx';
 import { supabase } from '../services/supabase.js';
+import { fetchCategories, DEFAULT_CATEGORIES, getCategoryIcon } from '../services/categoryService.js';
 
 const FALLBACK_PRODUCTS = [
   {
@@ -471,11 +472,22 @@ const ShopBySchoolSection = memo(() => (
 ShopBySchoolSection.displayName = 'ShopBySchoolSection';
 
 const HomePage = () => {
+  const [categories,       setCategories]       = useState(DEFAULT_CATEGORIES);
   const [featuredProducts, setFeaturedProducts] = useState(FALLBACK_PRODUCTS);
   const [newArrivals,      setNewArrivals]      = useState(FALLBACK_PRODUCTS);
   const [loadingFeatured,  setLoadingFeatured]  = useState(false);
   const [loadingArrivals,  setLoadingArrivals]  = useState(false);
   const [fetchError,       setFetchError]       = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchCategories(false).then((data) => {
+      if (mounted && data && data.length > 0) {
+        setCategories(data);
+      }
+    }).catch(console.error);
+    return () => { mounted = false; };
+  }, []);
 
   const fetchProducts = useCallback(async (signal) => {
     setLoadingFeatured(true);
@@ -695,19 +707,22 @@ const HomePage = () => {
           </motion.div>
           
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            {CATEGORIES.map(({ name, icon: Icon }) => (
-              <motion.div key={name} variants={fadeInUp}>
-                <Link
-                  to={`/shop?category=${encodeURIComponent(name)}`}
-                  className="group flex flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:border-[#D4A017]/40 hover:shadow-lg hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#D4A017]"
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FAF8F3] to-slate-50 text-[#1A2744] shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#D4A017]/10 group-hover:text-[#D4A017]">
-                    <Icon size={24} strokeWidth={1.5} aria-hidden="true" />
-                  </div>
-                  <p className="text-sm font-semibold text-[#1A2744]">{name}</p>
-                </Link>
-              </motion.div>
-            ))}
+            {categories.map((cat) => {
+              const Icon = getCategoryIcon(cat.icon_name);
+              return (
+                <motion.div key={cat.id || cat.slug || cat.name} variants={fadeInUp}>
+                  <Link
+                    to={`/shop?category=${encodeURIComponent(cat.slug || cat.name)}`}
+                    className="group flex flex-col items-center justify-center gap-4 rounded-3xl border border-slate-200/60 bg-white p-6 shadow-sm transition-all duration-300 hover:border-[#D4A017]/40 hover:shadow-lg hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[#D4A017]"
+                  >
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FAF8F3] to-slate-50 text-[#1A2744] shadow-inner transition-transform duration-300 group-hover:scale-110 group-hover:bg-[#D4A017]/10 group-hover:text-[#D4A017]">
+                      <Icon size={24} strokeWidth={1.5} aria-hidden="true" />
+                    </div>
+                    <p className="text-sm font-semibold text-[#1A2744] text-center">{cat.name}</p>
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </motion.section>

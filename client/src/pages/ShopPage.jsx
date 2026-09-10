@@ -8,7 +8,7 @@ import { supabase } from '../services/supabase.js';
 import Spinner from '../components/Spinner.jsx';
 import useScrollReveal from '../hooks/useScrollReveal.jsx';
 import useDebounce from '../hooks/useDebounce.js';
-
+import { fetchCategories } from '../services/categoryService.js';
 
 const ShopPage = () => {
   const [viewGrid, setViewGrid] = useState(true);
@@ -28,8 +28,21 @@ const ShopPage = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [categoryMap, setCategoryMap] = useState({});
 
   const debouncedPrice = useDebounce(price, 300);
+
+  // Load category slug-to-name mapping
+  useEffect(() => {
+    fetchCategories(true).then((cats) => {
+      const map = {};
+      cats.forEach((c) => {
+        if (c.slug) map[c.slug.toLowerCase()] = c.name;
+        if (c.name) map[c.name.toLowerCase()] = c.name;
+      });
+      setCategoryMap(map);
+    });
+  }, []);
 
   // Trigger animation hook
   useScrollReveal([page, products]);
@@ -45,7 +58,14 @@ const ShopPage = () => {
       try {
         let query = supabase.from('products').select('*', { count: 'exact' });
 
-        if (categoryParam) query = query.eq('category', categoryParam);
+        if (categoryParam) {
+          const resolved = categoryMap[categoryParam.toLowerCase()] || categoryParam;
+          if (resolved.toLowerCase() === categoryParam.toLowerCase()) {
+            query = query.ilike('category', resolved);
+          } else {
+            query = query.or(`category.ilike.${resolved},category.ilike.${categoryParam}`);
+          }
+        }
         if (searchParam) query = query.ilike('name', `%${searchParam}%`);
         if (rating) query = query.gte('ratings', Number(rating));
         if (debouncedPrice) query = query.lte('price', Number(debouncedPrice));
@@ -75,7 +95,7 @@ const ShopPage = () => {
     };
 
     fetchProducts();
-  }, [categoryParam, searchParam, debouncedPrice, rating, sort, page]);
+  }, [categoryParam, searchParam, debouncedPrice, rating, sort, page, categoryMap]);
 
   const handleSearchSubmit = useCallback((e) => {
     e.preventDefault();

@@ -4,6 +4,7 @@ import { Trash2, Star, ArrowLeft, Plus, Search, Pencil, X } from 'lucide-react';
 import { supabase } from '../../services/supabase.js';
 import Spinner from '../../components/Spinner.jsx';
 import { toast } from 'react-hot-toast';
+import { fetchCategories, DEFAULT_CATEGORIES } from '../../services/categoryService.js';
 
 const ManageProducts = () => {
   const [products, setProducts] = useState([]);
@@ -14,6 +15,9 @@ const ManageProducts = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState(
+    DEFAULT_CATEGORIES.map(c => c.name)
+  );
 
   // Edit state
   const [editingProduct, setEditingProduct] = useState(null);
@@ -21,7 +25,7 @@ const ManageProducts = () => {
     name: '',
     description: '',
     price: '',
-    category: 'Notebooks',
+    category: 'Notebooks & Registers',
     brand: '',
     stock: '',
     images: '',
@@ -33,17 +37,34 @@ const ManageProducts = () => {
     name: '',
     description: '',
     price: '',
-    category: 'Notebooks',
+    category: 'Notebooks & Registers',
     brand: '',
     stock: '',
     images: '',
     isFeatured: false,
   });
 
-  const CATEGORIES = [
-    'Books', 'Notebooks', 'Pens', 'Art Supplies', 'Office Supplies',
-    'Bags', 'Calculators', 'Geometry', 'Paper Products', 'Gift Items',
-  ];
+  // Load dynamic categories
+  useEffect(() => {
+    const loadCategoryOptions = async () => {
+      try {
+        const cats = await fetchCategories(false);
+        if (cats && cats.length > 0) {
+          const names = cats.map(c => c.name);
+          setAvailableCategories(names);
+          setNewProduct(prev => ({
+            ...prev,
+            category: prev.category || names[0]
+          }));
+        }
+      } catch (err) {
+        console.error('Error loading dynamic categories:', err);
+      }
+    };
+    loadCategoryOptions();
+  }, []);
+
+  const CATEGORIES = availableCategories;
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -261,10 +282,17 @@ const ManageProducts = () => {
                   className="mt-1 field" />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Category *
+                <div className="flex items-center justify-between">
+                  <span>Category *</span>
+                  <Link to="/admin/categories" target="_blank" className="text-xs text-[var(--brass)] hover:underline font-normal">
+                    + Manage Categories
+                  </Link>
+                </div>
                 <select required value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                   className="mt-1 field">
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  {Array.from(new Set([...CATEGORIES, editForm.category].filter(Boolean))).map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
                 </select>
               </label>
               <label className="block text-sm font-medium text-slate-700">
@@ -321,10 +349,15 @@ const ManageProducts = () => {
                   className="mt-1 field" placeholder="50" />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Category *
+                <div className="flex items-center justify-between">
+                  <span>Category *</span>
+                  <Link to="/admin/categories" target="_blank" className="text-xs text-[var(--brass)] hover:underline font-normal">
+                    + Manage Categories
+                  </Link>
+                </div>
                 <select required value={newProduct.category} onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
                   className="mt-1 field">
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </label>
               <label className="block text-sm font-medium text-slate-700">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Package, ShoppingCart, Users, TrendingUp, ArrowRight, School } from 'lucide-react';
+import { Package, ShoppingCart, Users, TrendingUp, ArrowRight, School, FolderTree } from 'lucide-react';
 import { supabase } from '../../services/supabase.js';
 import Spinner from '../../components/Spinner.jsx';
 
@@ -150,29 +150,33 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Quick nav — now 4 columns including School Packs */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Quick nav */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {[
-            { label: 'Manage Products', to: '/admin/products', desc: 'Add, edit, or remove products from the catalogue.' },
-            { label: 'Manage Orders', to: '/admin/orders', desc: 'Track and update order statuses for all customers.' },
-            { label: 'Manage Users', to: '/admin/users', desc: 'View registered users and manage access.' },
-            { label: 'School Packs', to: '/admin/products?search=pack', desc: 'Create and manage school book packs with bundled products.' },
-          ].map((item) => (
-            <Link key={item.to} to={item.to} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition group">
-              <div className="flex items-center gap-2 mb-2">
-                {item.label === 'School Packs' && (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10">
-                    <School size={16} className="text-[#D4A017]" />
+            { label: 'Manage Products', to: '/admin/products', desc: 'Add, edit, or remove products from the catalogue.', icon: Package },
+            { label: 'Manage Categories', to: '/admin/categories', desc: 'Create, organize, and seed product categories.', icon: FolderTree },
+            { label: 'Manage Orders', to: '/admin/orders', desc: 'Track and update order statuses for all customers.', icon: ShoppingCart },
+            { label: 'Manage Users', to: '/admin/users', desc: 'View registered users and manage access.', icon: Users },
+            { label: 'School Packs', to: '/admin/products?search=pack', desc: 'Create and manage school book packs with bundled products.', icon: School },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link key={item.to} to={item.to} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition group flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#D4A017]/10">
+                      <Icon size={16} className="text-[#D4A017]" />
+                    </div>
+                    <p className="font-serif text-lg font-semibold text-[var(--ink)] group-hover:text-[var(--brass)] transition leading-tight">{item.label}</p>
                   </div>
-                )}
-                <p className="font-serif text-lg font-semibold text-[var(--ink)] group-hover:text-[var(--brass)] transition">{item.label}</p>
-              </div>
-              <p className="mt-2 text-xs text-[var(--text-muted)] leading-relaxed">{item.desc}</p>
-              <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[var(--brass)]">
-                Go <ArrowRight size={12} />
-              </span>
-            </Link>
-          ))}
+                  <p className="mt-2 text-xs text-[var(--text-muted)] leading-relaxed">{item.desc}</p>
+                </div>
+                <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[var(--brass)]">
+                  Go <ArrowRight size={12} />
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </main>
