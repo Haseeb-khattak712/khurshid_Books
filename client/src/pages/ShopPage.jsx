@@ -62,25 +62,9 @@ const ShopPage = () => {
         let query = supabase.from('products').select('*', { count: 'exact' });
 
         if (categoryParam) {
-          const { names, ids } = getCategoryAndDescendants(categoryParam, allCategories);
-          if (names && names.length > 0) {
-            const escapedNames = names.map(n => `"${n}"`).join(',');
-            const orParts = [
-              `category.in.(${escapedNames})`,
-              `subcategory.in.(${escapedNames})`
-            ];
-            if (ids && ids.length > 0) {
-              orParts.push(`category_id.in.(${ids.join(',')})`);
-            }
-            query = query.or(orParts.join(','));
-          } else {
-            const resolved = categoryMap[categoryParam.toLowerCase()] || categoryParam;
-            if (resolved.toLowerCase() === categoryParam.toLowerCase()) {
-              query = query.ilike('category', resolved);
-            } else {
-              query = query.or(`category.ilike.${resolved},category.ilike.${categoryParam}`);
-            }
-          }
+          const { names } = getCategoryAndDescendants(categoryParam, allCategories);
+          const filterNames = names && names.length > 0 ? names : [categoryParam];
+          query = query.in('category', filterNames);
         }
         if (searchParam) query = query.ilike('name', `%${searchParam}%`);
         if (rating) query = query.gte('ratings', Number(rating));
@@ -97,7 +81,26 @@ const ShopPage = () => {
         const to = from + limit - 1;
         query = query.range(from, to);
 
-        const { data, count, error } = await query;
+        let { data, count, error } = await query;
+
+        // Graceful fallback if query fails (e.g. schema differences)
+        if (error) {
+          console.warn('Primary shop query failed, using safe fallback:', error.message);
+          let fallback = supabase.from('products').select('*', { count: 'exact' });
+          if (categoryParam) {
+            const { names } = getCategoryAndDescendants(categoryParam, allCategories);
+            const fallbackNames = names && names.length > 0 ? names : [categoryParam];
+            fallback = fallback.in('category', fallbackNames);
+          }
+          if (searchParam) fallback = fallback.ilike('name', `%${searchParam}%`);
+          if (debouncedPrice) fallback = fallback.lte('price', Number(debouncedPrice));
+          fallback = fallback.order('created_at', { ascending: false }).range(from, to);
+          const res = await fallback;
+          data = res.data;
+          count = res.count;
+          error = res.error;
+        }
+
         if (error) throw error;
 
         setProducts(data || []);

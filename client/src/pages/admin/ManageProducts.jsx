@@ -125,13 +125,9 @@ const ManageProducts = () => {
 
       // Category filter (includes all descendant subcategories)
       if (selectedFilterCategory) {
-        const { names, ids } = getCategoryAndDescendants(selectedFilterCategory, categories);
-        if (ids.length > 0) {
-          const orClause = `category_id.in.(${ids.join(',')}),category.in.(${names.map(n => `"${n}"`).join(',')}),subcategory.in.(${names.map(n => `"${n}"`).join(',')})`;
-          query = query.or(orClause);
-        } else {
-          query = query.in('category', names);
-        }
+        const { names } = getCategoryAndDescendants(selectedFilterCategory, categories);
+        const filterNames = names && names.length > 0 ? names : [selectedFilterCategory];
+        query = query.in('category', filterNames);
       }
 
       const { data, count, error } = await query.range(from, to);

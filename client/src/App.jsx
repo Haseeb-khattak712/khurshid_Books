@@ -13,26 +13,64 @@ import useScrollReveal from './hooks/useScrollReveal.jsx';
 import AdminRoute from './components/AdminRoutes.jsx';
 import './App.css';
 
-const HomePage = lazy(() => import('./pages/HomePage.jsx'));
-const ShopPage = lazy(() => import('./pages/ShopPage.jsx'));
-const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage.jsx'));
-const CartPage = lazy(() => import('./pages/CartPage.jsx'));
-const CheckoutPage = lazy(() => import('./pages/CheckoutPage.jsx'));
-const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage.jsx'));
-const LoginPage = lazy(() => import('./pages/LoginPage.jsx'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage.jsx'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'));
-const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage.jsx'));
-const WishlistPage = lazy(() => import('./pages/WishlistPage.jsx'));
-const AboutPage = lazy(() => import('./pages/AboutPage.jsx'));
-const ContactPage = lazy(() => import('./pages/ContactPage.jsx'));
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
-const ManageProducts = lazy(() => import('./pages/admin/ManageProducts.jsx'));
-const ManageOrders = lazy(() => import('./pages/admin/ManageOrders.jsx'));
-const ManageUsers = lazy(() => import('./pages/admin/ManageUsers.jsx'));
-const ManageCategories = lazy(() => import('./pages/admin/ManageCategories.jsx'));
-const PrintInvoice = lazy(() => import('./pages/admin/PrintInvoice.jsx'));
-const SchoolPacksPage = lazy(() => import('./pages/SchoolPacksPage.jsx'));
+// Listen for Vite chunk load errors and reload immediately
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    event?.preventDefault?.();
+    window.location.reload();
+  });
+}
+
+/**
+ * Wraps dynamic React.lazy imports with automated retry & deployment refresh logic.
+ * When a new production version is deployed, browsers with stale chunk manifests
+ * will automatically reload once to fetch the latest JS bundle rather than failing
+ * with 'Failed to fetch dynamically imported module'.
+ */
+function lazyWithRetry(factory) {
+  return lazy(async () => {
+    const pageHasBeenForceRefreshed =
+      typeof window !== 'undefined' &&
+      window.sessionStorage.getItem('page-has-been-force-refreshed') === 'true';
+
+    try {
+      const module = await factory();
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      }
+      return module;
+    } catch (error) {
+      if (!pageHasBeenForceRefreshed && typeof window !== 'undefined') {
+        console.warn('Stale deployment chunk detected, refreshing page:', error);
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // prevent throwing before reload completes
+      }
+      throw error;
+    }
+  });
+}
+
+const HomePage = lazyWithRetry(() => import('./pages/HomePage.jsx'));
+const ShopPage = lazyWithRetry(() => import('./pages/ShopPage.jsx'));
+const ProductDetailPage = lazyWithRetry(() => import('./pages/ProductDetailPage.jsx'));
+const CartPage = lazyWithRetry(() => import('./pages/CartPage.jsx'));
+const CheckoutPage = lazyWithRetry(() => import('./pages/CheckoutPage.jsx'));
+const OrderConfirmationPage = lazyWithRetry(() => import('./pages/OrderConfirmationPage.jsx'));
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage.jsx'));
+const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage.jsx'));
+const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage.jsx'));
+const OrderHistoryPage = lazyWithRetry(() => import('./pages/OrderHistoryPage.jsx'));
+const WishlistPage = lazyWithRetry(() => import('./pages/WishlistPage.jsx'));
+const AboutPage = lazyWithRetry(() => import('./pages/AboutPage.jsx'));
+const ContactPage = lazyWithRetry(() => import('./pages/ContactPage.jsx'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard.jsx'));
+const ManageProducts = lazyWithRetry(() => import('./pages/admin/ManageProducts.jsx'));
+const ManageOrders = lazyWithRetry(() => import('./pages/admin/ManageOrders.jsx'));
+const ManageUsers = lazyWithRetry(() => import('./pages/admin/ManageUsers.jsx'));
+const ManageCategories = lazyWithRetry(() => import('./pages/admin/ManageCategories.jsx'));
+const PrintInvoice = lazyWithRetry(() => import('./pages/admin/PrintInvoice.jsx'));
+const SchoolPacksPage = lazyWithRetry(() => import('./pages/SchoolPacksPage.jsx'));
 
 function ScrollRevealHandler() {
   const location = useLocation();

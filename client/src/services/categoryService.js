@@ -518,10 +518,17 @@ export async function fetchCategoriesWithProductCounts(includeInactive = false) 
   const categories = await fetchCategories(includeInactive);
 
   try {
-    // Query product category distributions
-    const { data: products, error } = await supabase
+    // Query product category distributions with resilient fallback
+    let { data: products, error } = await supabase
       .from('products')
       .select('id, category, category_id, subcategory');
+
+    if (error) {
+      // Fallback: query only basic columns if category_id/subcategory do not exist in schema
+      const fallback = await supabase.from('products').select('id, category');
+      products = fallback.data;
+      error = fallback.error;
+    }
 
     if (error || !products) {
       return categories.map(c => ({ ...c, product_count: 0 }));
@@ -563,22 +570,16 @@ export async function fetchCategoriesWithProductCounts(includeInactive = false) 
 export async function fetchProductsInCategory(category, includeSubcategories = true) {
   try {
     const allCategories = await fetchCategories(true);
-    const { names, ids } = getCategoryAndDescendants(category.id || category.name, allCategories);
+    const { names } = getCategoryAndDescendants(category.id || category.name, allCategories);
 
     const matchNames = includeSubcategories ? names : [category.name];
-    const matchIds = includeSubcategories ? ids : (category.id ? [category.id] : []);
 
-    let query = supabase.from('products').select('*');
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .in('category', matchNames)
+      .order('created_at', { ascending: false });
 
-    if (matchIds.length > 0) {
-      // Check both category_id or text name
-      const orFilter = `category_id.in.(${matchIds.join(',')}),category.in.(${matchNames.map(n => `"${n}"`).join(',')})`;
-      query = query.or(orFilter);
-    } else {
-      query = query.in('category', matchNames);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (err) {
