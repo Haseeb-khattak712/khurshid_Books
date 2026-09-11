@@ -8,7 +8,7 @@ import { supabase } from '../services/supabase.js';
 import Spinner from '../components/Spinner.jsx';
 import useScrollReveal from '../hooks/useScrollReveal.jsx';
 import useDebounce from '../hooks/useDebounce.js';
-import { fetchCategories } from '../services/categoryService.js';
+import { fetchCategories, getCategoryAndDescendants } from '../services/categoryService.js';
 
 const ShopPage = () => {
   const [viewGrid, setViewGrid] = useState(true);
@@ -32,9 +32,12 @@ const ShopPage = () => {
 
   const debouncedPrice = useDebounce(price, 300);
 
-  // Load category slug-to-name mapping
+  const [allCategories, setAllCategories] = useState([]);
+
+  // Load category hierarchy
   useEffect(() => {
     fetchCategories(true).then((cats) => {
+      setAllCategories(cats);
       const map = {};
       cats.forEach((c) => {
         if (c.slug) map[c.slug.toLowerCase()] = c.name;
@@ -59,11 +62,24 @@ const ShopPage = () => {
         let query = supabase.from('products').select('*', { count: 'exact' });
 
         if (categoryParam) {
-          const resolved = categoryMap[categoryParam.toLowerCase()] || categoryParam;
-          if (resolved.toLowerCase() === categoryParam.toLowerCase()) {
-            query = query.ilike('category', resolved);
+          const { names, ids } = getCategoryAndDescendants(categoryParam, allCategories);
+          if (names && names.length > 0) {
+            const escapedNames = names.map(n => `"${n}"`).join(',');
+            const orParts = [
+              `category.in.(${escapedNames})`,
+              `subcategory.in.(${escapedNames})`
+            ];
+            if (ids && ids.length > 0) {
+              orParts.push(`category_id.in.(${ids.join(',')})`);
+            }
+            query = query.or(orParts.join(','));
           } else {
-            query = query.or(`category.ilike.${resolved},category.ilike.${categoryParam}`);
+            const resolved = categoryMap[categoryParam.toLowerCase()] || categoryParam;
+            if (resolved.toLowerCase() === categoryParam.toLowerCase()) {
+              query = query.ilike('category', resolved);
+            } else {
+              query = query.or(`category.ilike.${resolved},category.ilike.${categoryParam}`);
+            }
           }
         }
         if (searchParam) query = query.ilike('name', `%${searchParam}%`);
@@ -95,7 +111,7 @@ const ShopPage = () => {
     };
 
     fetchProducts();
-  }, [categoryParam, searchParam, debouncedPrice, rating, sort, page, categoryMap]);
+  }, [categoryParam, searchParam, debouncedPrice, rating, sort, page, categoryMap, allCategories]);
 
   const handleSearchSubmit = useCallback((e) => {
     e.preventDefault();

@@ -154,7 +154,7 @@ const AdminDashboard = () => {
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {[
             { label: 'Manage Products', to: '/admin/products', desc: 'Add, edit, or remove products from the catalogue.', icon: Package },
-            { label: 'Manage Categories', to: '/admin/categories', desc: 'Create, organize, and seed product categories.', icon: FolderTree },
+            { label: 'Manage Categories & Hierarchy', to: '/admin/categories', desc: 'Organize category trees, subcategories, and templates.', icon: FolderTree },
             { label: 'Manage Orders', to: '/admin/orders', desc: 'Track and update order statuses for all customers.', icon: ShoppingCart },
             { label: 'Manage Users', to: '/admin/users', desc: 'View registered users and manage access.', icon: Users },
             { label: 'School Packs', to: '/admin/products?search=pack', desc: 'Create and manage school book packs with bundled products.', icon: School },
