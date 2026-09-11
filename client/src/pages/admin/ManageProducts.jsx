@@ -11,7 +11,9 @@ import {
   Sparkles,
   Bookmark,
   Filter,
-  ExternalLink
+  ExternalLink,
+  Image as ImageIcon,
+  CheckCircle2
 } from 'lucide-react';
 import { supabase } from '../../services/supabase.js';
 import Spinner from '../../components/Spinner.jsx';
@@ -22,6 +24,7 @@ import {
   getCategoryAndDescendants
 } from '../../services/categoryService.js';
 import { saveCustomItemTemplate } from '../../services/templateService.js';
+import { compressImage, formatFileSize } from '../../utils/imageCompressor.js';
 import CategoryTreeSelect from '../../components/admin/CategoryTreeSelect.jsx';
 import TemplateModal from '../../components/admin/TemplateModal.jsx';
 
@@ -165,15 +168,44 @@ const ManageProducts = () => {
   const uploadFileHandler = async (e, setFormFunc) => {
     const file = e.target.files[0];
     if (!file) return;
-    const toastId = toast.loading('Uploading image...');
+
+    // Reset input value so the same file can be re-selected if replaced
+    e.target.value = '';
+
+    const initialSizeStr = formatFileSize(file.size);
+    const toastId = toast.loading(`Compressing image (${initialSizeStr})...`);
+
     try {
-      const fileExt = file.name.split('.').pop();
+      // 1. Client-side browser compression (max 1200x1200px, 82% quality WebP)
+      const {
+        file: compressedFile,
+        originalSize,
+        compressedSize,
+        reductionPercent
+      } = await compressImage(file, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.82,
+        preferredFormat: 'image/webp'
+      });
+
+      const compressedSizeStr = formatFileSize(compressedSize);
+      toast.loading(
+        `Uploading optimized image (${compressedSizeStr}, -${reductionPercent}% size)...`,
+        { id: toastId }
+      );
+
+      // 2. Generate unique filename preserving compressed extension (.webp)
+      const fileExt = compressedFile.name.split('.').pop() || 'webp';
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, file);
+        .upload(filePath, compressedFile, {
+          contentType: compressedFile.type || 'image/webp',
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
@@ -181,11 +213,24 @@ const ManageProducts = () => {
         .from('product-images')
         .getPublicUrl(filePath);
 
-      setFormFunc((prev) => ({ ...prev, images: publicUrl }));
-      toast.success('Image uploaded successfully', { id: toastId });
+      setFormFunc((prev) => ({
+        ...prev,
+        images: publicUrl,
+        imageMeta: {
+          originalSize,
+          compressedSize,
+          reductionPercent
+        }
+      }));
+
+      const savingText = reductionPercent > 0
+        ? ` (${initialSizeStr} → ${compressedSizeStr}, -${reductionPercent}% saved)`
+        : ` (${compressedSizeStr})`;
+
+      toast.success(`Image compressed & uploaded!${savingText}`, { id: toastId, duration: 4500 });
     } catch (error) {
-      console.error(error);
-      toast.error('Image upload failed', { id: toastId });
+      console.error('Image upload/compression failed:', error);
+      toast.error(error.message || 'Image upload failed', { id: toastId });
     }
   };
 
@@ -511,12 +556,65 @@ const ManageProducts = () => {
                 />
               </label>
 
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 sm:col-span-2">
-                Image Upload or URL
-                <input type="file" accept="image/*" onChange={(e) => uploadFileHandler(e, setEditForm)}
-                  className="mt-1 w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--brass)] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-[var(--ink)] hover:file:bg-[var(--brass)]/80" />
-                {editForm.images && <p className="mt-1 text-xs text-green-600">Image active.</p>}
-              </label>
+              {/* Image Upload & Active Preview */}
+              <div className="block sm:col-span-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Product Image
+                  </span>
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200/60 shadow-2xs">
+                    <CheckCircle2 size={11} className="text-emerald-600" /> Auto-Compressed (WebP)
+                  </span>
+                </div>
+
+                {editForm.images ? (
+                  <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
+                    <img
+                      src={editForm.images}
+                      alt="Active product preview"
+                      className="h-20 w-20 shrink-0 rounded-xl object-cover border border-slate-200 bg-white shadow-2xs"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-800">
+                        Active Compressed Product Image
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-md">
+                        {editForm.images}
+                      </p>
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs">
+                          <ImageIcon size={13} className="text-[var(--brass)]" /> Replace Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => uploadFileHandler(e, setEditForm)}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setEditForm(prev => ({ ...prev, images: '' }))}
+                          className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition"
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => uploadFileHandler(e, setEditForm)}
+                      className="w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--brass)] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-[var(--ink)] hover:file:bg-[var(--brass)]/80 cursor-pointer"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Upload high-res JPG, PNG, or WebP. Images are automatically scaled & compressed to ~60-120 KB without clarity loss.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 sm:col-span-2">
                 Description & Specifications
@@ -630,12 +728,65 @@ const ManageProducts = () => {
                 />
               </label>
 
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 sm:col-span-2">
-                Image Upload
-                <input type="file" accept="image/*" onChange={(e) => uploadFileHandler(e, setNewProduct)}
-                  className="mt-1 w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--brass)] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-[var(--ink)] hover:file:bg-[var(--brass)]/80" />
-                {newProduct.images && <p className="mt-1 text-xs text-green-600">Image selected/uploaded.</p>}
-              </label>
+              {/* Image Upload & Active Preview */}
+              <div className="block sm:col-span-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Product Image
+                  </span>
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200/60 shadow-2xs">
+                    <CheckCircle2 size={11} className="text-emerald-600" /> Auto-Compressed (WebP)
+                  </span>
+                </div>
+
+                {newProduct.images ? (
+                  <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
+                    <img
+                      src={newProduct.images}
+                      alt="Uploaded product preview"
+                      className="h-20 w-20 shrink-0 rounded-xl object-cover border border-slate-200 bg-white shadow-2xs"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-800">
+                        Uploaded & Compressed Image Ready
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5 truncate max-w-md">
+                        {newProduct.images}
+                      </p>
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs">
+                          <ImageIcon size={13} className="text-[var(--brass)]" /> Replace Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => uploadFileHandler(e, setNewProduct)}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setNewProduct(prev => ({ ...prev, images: '' }))}
+                          className="inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition"
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => uploadFileHandler(e, setNewProduct)}
+                      className="w-full text-sm text-slate-500 file:mr-4 file:rounded-full file:border-0 file:bg-[var(--brass)] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-[var(--ink)] hover:file:bg-[var(--brass)]/80 cursor-pointer"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Upload high-res JPG, PNG, or WebP. Images are automatically scaled & compressed to ~60-120 KB without clarity loss.
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 sm:col-span-2">
                 Description & Specifications
