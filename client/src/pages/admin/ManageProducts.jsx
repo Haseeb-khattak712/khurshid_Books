@@ -76,7 +76,18 @@ const ManageProducts = () => {
       .then((data) => {
         if (data && data.length > 0) {
           setCategories(data);
-          if (!newProduct.category_id) {
+          const matched = urlCategoryParam
+            ? data.find(c => c.name.toLowerCase() === urlCategoryParam.toLowerCase() || c.id === urlCategoryParam || c.slug === urlCategoryParam.toLowerCase())
+            : null;
+
+          if (matched) {
+            setNewProduct(prev => ({
+              ...prev,
+              category: matched.name,
+              category_id: matched.id
+            }));
+            setShowForm(true);
+          } else if (!newProduct.category_id) {
             const first = data[0];
             setNewProduct(prev => ({
               ...prev,
@@ -89,7 +100,7 @@ const ManageProducts = () => {
       .catch((err) => {
         console.error('Error loading categories:', err);
       });
-  }, []);
+  }, [urlCategoryParam]);
 
   // Fetch products with tree-aware category filtering
   const fetchProducts = async () => {
@@ -284,10 +295,20 @@ const ManageProducts = () => {
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from('products')
         .update(payload)
         .eq('id', editingProduct.id || editingProduct._id);
+
+      // Fallback if category_id column does not exist yet in Supabase
+      if (error && (error.code === 'PGRST204' || error.message?.includes('category_id'))) {
+        const { category_id: _cid, ...fallbackPayload } = payload;
+        const retry = await supabase
+          .from('products')
+          .update(fallbackPayload)
+          .eq('id', editingProduct.id || editingProduct._id);
+        error = retry.error;
+      }
 
       if (error) throw error;
 
@@ -329,7 +350,15 @@ const ManageProducts = () => {
         num_reviews: 0
       };
 
-      const { error } = await supabase.from('products').insert([payload]);
+      let { error } = await supabase.from('products').insert([payload]);
+
+      // Fallback if category_id column does not exist yet in Supabase
+      if (error && (error.code === 'PGRST204' || error.message?.includes('category_id'))) {
+        const { category_id: _cid, ...fallbackPayload } = payload;
+        const retry = await supabase.from('products').insert([fallbackPayload]);
+        error = retry.error;
+      }
+
       if (error) throw error;
 
       toast.success('Product created successfully');
